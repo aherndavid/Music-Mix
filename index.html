@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.6">
+<meta name="version" content="1.7">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -112,8 +112,10 @@
   .icon-btn { display: flex; align-items: center; justify-content: center; padding: 0; color: #111; }
   .icon-btn svg { fill: currentColor; display: block; }
 
-  .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; margin-bottom: 18px; }
-  .controls button { height: min(clamp(150px, 37vw, 200px), 24vh); }
+  .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .controls button { height: min(clamp(150px, 37vw, 200px), 18.5vh); }
+  /* Graphic EQ bars */
+  #eq { display: block; width: 100%; height: min(clamp(40px, 11vw, 56px), 6.5vh); margin-bottom: 10px; }
   .controls svg { width: 58%; max-width: 90px; height: auto; }
   #btn-prev, #btn-next { background: #000; color: #ff8c00; border-color: #ff8c00; }
   #btn-play { background: #1e88e5; color: #fff; border-color: #64b5f6; }
@@ -140,6 +142,7 @@
 
 
   .msg { text-align: center; font-size: clamp(20px, 5vw, 28px); margin-top: 16px; color: #ff6b6b; }
+  .msg:empty { display: none; }
 
   /* Big Back button, pinned to the bottom of the screen */
   .back-bar {
@@ -277,6 +280,8 @@
         <svg viewBox="0 0 100 60"><polygon points="0,0 0,60 50,30"/><polygon points="50,0 50,60 100,30"/></svg>
       </button>
     </div>
+
+    <canvas id="eq" aria-hidden="true"></canvas>
 
     <div class="rate">
       <button class="icon-btn" id="btn-dislike" onclick="dislikeSong()" aria-label="Don't like this song – skip it and never play it again">
@@ -788,6 +793,7 @@ function openAlbum(i, autoplay = true) {
   album = ALBUMS[i];
   try { localStorage.setItem('genre', album.id); } catch (e) {}
   document.getElementById('player').classList.toggle('club', album.id === 'club');
+  setTimeout(eqStart);   // bars take the genre's colour
   [...document.getElementById('genres').children].forEach((b, n) =>
     b.setAttribute('aria-pressed', n === i ? 'true' : 'false'));
   buildStations();
@@ -979,6 +985,124 @@ audio.addEventListener('error', () => {
   msg.textContent = radio ? STATIONS[radio].name + ' could not be reached.' : 'This song could not be found.';
   updatePlayButton();
 });
+
+// ── Graphic EQ ──
+// The levels come from a separate copy of the song, worked out ahead
+// and looked up by playing time. The player's own sound is never routed
+// through Web Audio, which could stop it when the phone locks.
+// Radio can't be read this way, so its bars are just for show.
+const EQ_BANDS = 16, EQ_FPS = 25, EQ_RATE = 22050, EQ_N = 1024;
+const eqCanvas = document.getElementById('eq');
+const eqNow = new Float32Array(EQ_BANDS);
+let eqData = null, eqUrl = '', eqAbort = null, eqRunning = false;
+
+function eqFft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; }   // im is all zero here
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const half = len >> 1, step = -2 * Math.PI / len;
+    for (let k = 0; k < half; k++) {
+      const c = Math.cos(step * k), d = Math.sin(step * k);
+      for (let a = k; a < n; a += len) {
+        const b = a + half, x = re[b] * c - im[b] * d, y = re[b] * d + im[b] * c;
+        re[b] = re[a] - x; im[b] = im[a] - y; re[a] += x; im[a] += y;
+      }
+    }
+  }
+}
+
+async function eqLoad() {
+  const url = audio.src;
+  if (radio || document.hidden || audio.paused || url === eqUrl) return;
+  if (eqAbort) eqAbort.abort();
+  const ctl = eqAbort = new AbortController();
+  eqUrl = url; eqData = null;
+  try {
+    const res = await fetch(url, { signal: ctl.signal });
+    if (!res.ok) throw new Error('not found');
+    const bytes = await res.arrayBuffer();
+    const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const buf = await new Promise((ok, no) => {
+      const pr = new Ctx(1, 1, EQ_RATE).decodeAudioData(bytes, ok, no);
+      if (pr && pr.catch) pr.catch(no);
+    });
+    if (ctl.signal.aborted) return;
+    const pcm = buf.getChannelData(0), rate = buf.sampleRate;
+    const frames = Math.ceil(buf.duration * EQ_FPS);
+    const raw = new Float32Array(frames * EQ_BANDS);
+    const re = new Float32Array(EQ_N), im = new Float32Array(EQ_N), edges = [];
+    for (let b = 0; b <= EQ_BANDS; b++) edges.push(40 * Math.pow(10000 / 40, b / EQ_BANDS) * EQ_N / rate);
+    const peaks = new Float32Array(EQ_BANDS);
+    for (let f = 0; f < frames; f++) {
+      const at = Math.floor(f * rate / EQ_FPS) - EQ_N / 2;
+      for (let i = 0; i < EQ_N; i++) {
+        re[i] = (pcm[at + i] || 0) * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / EQ_N));
+        im[i] = 0;
+      }
+      eqFft(re, im);
+      for (let b = 0; b < EQ_BANDS; b++) {
+        const lo = Math.max(1, Math.floor(edges[b])), hi = Math.max(lo + 1, Math.floor(edges[b + 1]));
+        let m = 0;
+        for (let k = lo; k < hi; k++) m = Math.max(m, re[k] * re[k] + im[k] * im[k]);
+        m = Math.sqrt(m);
+        raw[f * EQ_BANDS + b] = m;
+        if (m > peaks[b]) peaks[b] = m;
+      }
+      if (f % 200 === 199) {                    // let the buttons stay responsive
+        await new Promise(r => setTimeout(r));
+        if (ctl.signal.aborted) return;
+      }
+    }
+    // Each band on its own scale: its loudest moment fills the bar
+    for (let i = 0; i < raw.length; i++) {
+      const pk = peaks[i % EQ_BANDS];
+      raw[i] = pk ? Math.max(0, 1 + 20 * Math.log10(raw[i] / pk + 1e-6) / 40) : 0;
+    }
+    eqData = raw;
+  } catch (e) {
+    if (!ctl.signal.aborted) eqData = null;     // bars stay flat for this song
+  }
+}
+
+function eqLevel(b) {
+  if (audio.paused) return 0;
+  if (radio) {
+    const t = performance.now() / 1000;
+    return 0.45 + 0.25 * Math.sin(t * (3 + b * 0.37) + b * 1.7) + 0.2 * Math.sin(t * 7.3 + b * 2.9);
+  }
+  if (!eqData || eqUrl !== audio.src) return 0;
+  return eqData[Math.floor(audio.currentTime * EQ_FPS) * EQ_BANDS + b] || 0;
+}
+
+function eqDraw() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.round(eqCanvas.clientWidth * dpr), h = Math.round(eqCanvas.clientHeight * dpr);
+  if (eqCanvas.width !== w) eqCanvas.width = w;
+  if (eqCanvas.height !== h) eqCanvas.height = h;
+  const g = eqCanvas.getContext('2d');
+  g.clearRect(0, 0, w, h);
+  g.fillStyle = album && album.id === 'club' ? '#ffd400' : '#ff8c00';
+  const gap = 4 * dpr, bw = (w - gap * (EQ_BANDS - 1)) / EQ_BANDS;
+  let moving = false;
+  for (let b = 0; b < EQ_BANDS; b++) {
+    const v = eqLevel(b);
+    eqNow[b] = v > eqNow[b] ? v : Math.max(v, eqNow[b] - 0.035);   // quick up, gentle fall
+    if (eqNow[b] > 0.001) moving = true;
+    const bh = Math.max(3 * dpr, eqNow[b] * h);
+    g.fillRect(b * (bw + gap), h - bh, bw, bh);
+  }
+  eqRunning = !document.hidden && (moving || !audio.paused);
+  if (eqRunning) requestAnimationFrame(eqDraw);
+}
+function eqStart() { if (!eqRunning) { eqRunning = true; requestAnimationFrame(eqDraw); } }
+audio.addEventListener('playing', () => { eqLoad(); eqStart(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { eqLoad(); eqStart(); } });
+window.addEventListener('resize', eqStart);
 
 // Lock-screen / headphone controls on phones
 if ('mediaSession' in navigator) {
