@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.7">
+<meta name="version" content="1.8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -113,9 +113,17 @@
   .icon-btn svg { fill: currentColor; display: block; }
 
   .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; margin-bottom: 10px; }
-  .controls button { height: min(clamp(150px, 37vw, 200px), 18.5vh); }
+  .controls button { height: min(clamp(150px, 37vw, 200px), 16vh); }
   /* Graphic EQ bars */
-  #eq { display: block; width: 100%; height: min(clamp(40px, 11vw, 56px), 6.5vh); margin-bottom: 10px; }
+  /* The page fills the screen, and the EQ takes all the spare height */
+  body { display: flex; flex-direction: column; }
+  .wrap { flex: 1 0 auto; display: flex; flex-direction: column; }
+  #player { flex: 1 0 auto; display: flex; flex-direction: column; }
+  #player[hidden] { display: none; }
+  #eq { display: block; width: 100%; height: 0; flex: 1 0 0px; min-height: min(clamp(48px, 14vw, 72px), 8vh); margin-bottom: 10px; }
+  /* Radio playing: no play / skip / thumbs, so the EQ gets their space.
+     They come back if the radio is paused (a call, or the lock screen). */
+  #player.radio-on .controls, #player.radio-on .rate { display: none; }
   .controls svg { width: 58%; max-width: 90px; height: auto; }
   #btn-prev, #btn-next { background: #000; color: #ff8c00; border-color: #ff8c00; }
   #btn-play { background: #1e88e5; color: #fff; border-color: #64b5f6; }
@@ -215,11 +223,17 @@
   }
   #version { display: none; }   /* the version shows on the splash screen */
   #btn-close { margin: 0 auto; background: #c62828; border-color: #ef5350; color: #fff; -webkit-text-stroke: 0; font-size: clamp(20px, 5vw, 30px); letter-spacing: 0.08em; width: 100%; }
-  /* ── Club Classics: yellow text and outlines (CLOSE stays as it is) ── */
+  /* ── Club Classics: yellow text and yellow buttons (CLOSE stays as it is) ── */
   #player.club, #player.club .now-text > div, #player.club .now .art-msg, #player.club .msg { color: #ffd400; }
-  #player.club button { color: #ffd400; border-color: #ffd400; }
-  #player.club .genres button[aria-pressed="true"] { background: #ffd400; color: #111; }
-  #player.club .rate button.on { border-color: #fff; }   /* pressed thumb keeps its white edge */
+  #player.club button { background: #ffd400; color: #111; border-color: #ffd400; }
+  /* The genre that's on, and a pressed thumb: the other way round */
+  #player.club .genres button[aria-pressed="true"],
+  #player.club .rate button.on { background: #000; color: #ffd400; }
+  #player.club #btn-play.playing { animation-name: play-flash-club; }
+  @keyframes play-flash-club {
+    0%, 100% { background: #ffd400; box-shadow: 0 0 0 0 rgba(255, 212, 0, 0); }
+    50%      { background: #ffe873; box-shadow: 0 0 22px 6px rgba(255, 212, 0, 0.6); }
+  }
   .help {
     position: fixed; inset: 0; z-index: 90;
     background: #111;
@@ -925,6 +939,7 @@ function setRadioMode(key) {
     document.getElementById('btn-' + k).textContent = radio === k ? 'BACK TO MUSIC' : STATIONS[k].label;
   }
   document.querySelector('.rate').style.visibility = radio ? 'hidden' : '';
+  updateRadioOn();
 }
 
 function toggleRadio(key) {
@@ -967,7 +982,11 @@ function prevTrack() {
 }
 
 
+function updateRadioOn() {
+  document.getElementById('player').classList.toggle('radio-on', !!radio && !audio.paused);
+}
 function updatePlayButton() {
+  updateRadioOn();
   const playing = !audio.paused;
   playBtn.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
   playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
@@ -1103,6 +1122,7 @@ function eqStart() { if (!eqRunning) { eqRunning = true; requestAnimationFrame(e
 audio.addEventListener('playing', () => { eqLoad(); eqStart(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { eqLoad(); eqStart(); } });
 window.addEventListener('resize', eqStart);
+if (window.ResizeObserver) new ResizeObserver(eqStart).observe(eqCanvas);
 
 // Lock-screen / headphone controls on phones
 if ('mediaSession' in navigator) {
