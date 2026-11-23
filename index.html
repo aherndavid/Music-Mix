@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.4">
+<meta name="version" content="1.5">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -198,10 +198,10 @@
   .btn-radio {
     flex: 1 1 0; min-width: 0; background: #4a4a4a; color: #f2f2f2; border-color: #6e6e6e;
     font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
-    padding: 8px 6px;
+    padding: 8px 6px; height: clamp(64px, 17vw, 90px);
   }
-  #btn-capdance   { background: #0d47a1; border-color: #5c8fe0; }
-  #btn-heartdance { background: #1976d2; border-color: #64b5f6; }
+  #btn-moonmission { background: #0d47a1; border-color: #5c8fe0; }
+  #btn-c895       { background: #6a1b9a; border-color: #ba68c8; }
   #btn-heart70s   { background: #b34700; border-color: #ff8a50; }
   #btn-heart80s   { background: #d6004f; border-color: #ff5c93; }
   #btn-gold       { background: #8a6508; border-color: #e0b84a; }
@@ -210,20 +210,6 @@
     font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
     padding: 8px 12px;
   }
-  /* ── Collapsible menu ── */
-  .menu-row { margin-top: 14px; }
-  .menu-btn {
-    background: #000; color: #ff8c00; border-color: #ff8c00;
-    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
-    padding: 8px 12px; min-width: 0;
-  }
-  .menu-btn::after { content: " \25BE"; }                 /* ▾ closed */
-  .menu-btn[aria-expanded="true"] { background: #ff8c00; color: #111; }
-  .menu-btn[aria-expanded="true"]::after { content: " \25B4"; }  /* ▴ open */
-  .menu-row .menu-btn { height: clamp(84px, 22.8vw, 110px); }   /* RADIO: double height */
-  .panel { margin-top: 8px; padding: 10px; border: 2px solid #333; border-radius: 18px; background: #1a1a1a; }
-  .panel[hidden] { display: none; }
-  .panel .radio-row { margin-top: 0; }
   #version { display: none; }   /* the version shows on the splash screen */
   #btn-close { margin: 0 auto; background: #c62828; border-color: #ef5350; color: #fff; -webkit-text-stroke: 0; font-size: clamp(20px, 5vw, 30px); letter-spacing: 0.08em; width: 100%; }
   .help {
@@ -296,14 +282,8 @@
       </button>
     </div>
 
-    <!-- RADIO opens the stations underneath -->
-    <div class="menu-row">
-      <button class="menu-btn" id="btn-menu-radio" onclick="toggleRadioPanel()" aria-expanded="false" aria-controls="panel-radio">RADIO</button>
-    </div>
-
-    <div class="panel" id="panel-radio" hidden>
-      <div class="radio-row" id="radio-row"></div>
-    </div>
+    <!-- The genre's two radio stations, filled in from ALBUMS -->
+    <div class="radio-row" id="radio-row" role="group" aria-label="Radio stations"></div>
 
     <div class="msg" id="msg"></div>
   </div>
@@ -516,7 +496,7 @@ const ALBUMS = [
     }
   },
   {
-    id: "club", title: "Club Classics", folder: "songs", stations: ["capdance","heartdance"],
+    id: "club", title: "Club Classics", folder: "songs", stations: ["moonmission","c895"],
     tracks: [
       "(I Wanna Give You) Devotion.mp3",
       "1998 (Paul van Dyk Mix).mp3",
@@ -919,8 +899,8 @@ function updateMediaSession(artSrc) {
 // never play at once. Tapping the playing station's button again (or
 // a skip button) goes back to the songs.
 const STATIONS = {
-  capdance: { name: 'Capital Dance', label: 'CAPITAL DANCE', url: 'https://media-ssl.musicradio.com/CapitalDanceMP3', art: 'assets/capdance.svg' },
-  heartdance: { name: 'Heart Dance', label: 'HEART DANCE', url: 'https://media-ssl.musicradio.com/HeartDanceMP3', art: 'assets/heartdance.svg' },
+  moonmission: { name: 'Moon Mission Tokyo (Japan)', label: 'JAPAN DANCE TOKYO', url: 'https://uk5.internet-radio.com/proxy/mmr?mp=/stream;', art: 'assets/moonmission.svg' },
+  c895: { name: 'Dance 89.5 (USA)', label: 'USA DANCE 89.5', url: 'https://knhc-ice.streamguys1.com/live', art: 'assets/c895.svg' },
   heart70s: { name: 'Heart 70s', label: 'HEART 70s', url: 'https://media-ssl.musicradio.com/Heart70sMP3', art: 'assets/heart70s.svg' },
   heart80s: { name: 'Heart 80s', label: 'HEART 80s', url: 'https://media-ssl.musicradio.com/Heart80sMP3', art: 'assets/heart80s.svg' },
   gold: { name: 'Gold Radio', label: 'GOLD RADIO', url: 'https://media-ssl.musicradio.com/GoldMP3', art: 'assets/gold.svg' }
@@ -1021,16 +1001,6 @@ document.getElementById('version').textContent =
 // one sent makes FormSubmit email the owner a link to switch it on.
 const HELP_EMAIL = 'davidpaulahern@gmail.com';
 
-// ── Menu: RADIO opens the stations underneath ──
-function setOpen(btnId, panelId, open) {
-  document.getElementById(panelId).hidden = !open;
-  document.getElementById(btnId).setAttribute('aria-expanded', open ? 'true' : 'false');
-}
-function toggleRadioPanel() {
-  setOpen('btn-menu-radio', 'panel-radio', document.getElementById('panel-radio').hidden);
-  // Small phones: bring the stations out from behind CLOSE
-  if (!document.getElementById('panel-radio').hidden) window.scrollTo(0, document.documentElement.scrollHeight);
-}
 document.getElementById('splash-version').textContent =
   'v' + (document.querySelector('meta[name="version"]')?.content || '');
 
