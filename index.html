@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="version" content="1.2">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="dPaul Music">
+<meta name="application-name" content="dPaul Music">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<title>dPaul Music</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #111; min-height: 100%; }
+  body {
+    min-height: 100vh; min-height: 100dvh;
+    background: #111;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(20px, 5vw, 28px);
+    /* Fill the whole screen, keeping clear of the notch and home bar */
+    padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+             24px calc(16px + env(safe-area-inset-left));
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { width: 100%; max-width: 820px; margin: 0 auto; }
+
+  h1 { font-size: clamp(30px, 8vw, 44px); text-align: center; margin: 8px 0 20px; }
+
+  button {
+    font-family: inherit;
+    font-weight: bold;
+    font-size: clamp(24px, 6.5vw, 36px);
+    color: #111;
+    background: #b0b0b0;
+    border: 3px solid #8c8c8c;
+    border-radius: 18px;
+    padding: 20px 12px;
+    width: 100%;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  button:active { filter: brightness(0.8); }
+  button:focus-visible { outline: 6px solid #fff; outline-offset: 4px; }
+
+  /* ── Genre buttons ── */
+  .genres { display: grid; grid-template-columns: 1fr 1fr 2.6fr; gap: 8px; margin-bottom: 12px; }
+  .genres button {
+    background: #000; color: #ff8c00; border-color: #ff8c00; min-width: 0; padding: 7px 2px;
+    font-size: clamp(17px, 4.6vw, 28px); font-weight: 900; border-radius: 14px;
+  }
+  .genres button[aria-pressed="true"] { background: #ff8c00; color: #111; }
+  #player.more-open .genres { display: none; }
+
+
+  /* ── Player ── */
+  /* Cover on the left, song details beside it on the right. Sized by
+     screen height too, so the buttons still fit without scrolling. */
+  .now { display: flex; flex-direction: row; align-items: center; gap: 16px; margin-bottom: 14px; }
+  /* Fixed-size box: its space is kept even while the picture loads
+     or when a song has none, so the buttons never jump. */
+  .now .art { width: min(46vw, 29vh, 340px); height: min(46vw, 29vh, 340px); border-radius: 14px; background: #222; overflow: hidden; flex-shrink: 0; }
+  .now .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .now .art img[hidden] { display: none; }
+  .now .art { position: relative; }
+  .now .art-msg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 10px; text-align: center; color: #aaa; line-height: 1.2;
+    font-size: clamp(14px, 3.6vw, 20px);
+  }
+  .now .art-msg[hidden] { display: none; }
+  .now .art-msg.flash {
+    color: #fff; font-weight: 900; font-size: clamp(16px, 4.2vw, 24px);
+    animation: art-flash 1s ease-in-out infinite;
+  }
+  /* No artwork: a plain "white label" record fills the box */
+  .now .art-msg.white-label {
+    padding: 0; font-size: 0;
+    background:
+      radial-gradient(circle, #111 0 3%, #fff 3.5% 22%, #111 22.5% 23.5%,
+        transparent 24%),
+      repeating-radial-gradient(circle, #0b0b0b 0 1.5px, #1c1c1c 1.5px 3px);
+    border-radius: 50%;
+  }
+  @keyframes art-flash {
+    0%, 100% { opacity: 1; background: #1565c0; }
+    50%      { opacity: 0.35; background: #222; }
+  }
+  .now-text { text-align: left; min-width: 0; flex: 1 1 0; }
+  /* Always two lines tall, whether the name is short or long */
+  .now .track {
+    font-size: clamp(22px, 6vw, 38px); font-weight: bold; line-height: 1.2; max-height: 2.4em;
+    word-break: break-word; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .now .track .year { color: #ffd400; white-space: nowrap; }
+  .now .artist { font-size: clamp(18px, 4.6vw, 28px); font-weight: bold; color: #4fc3ff; margin-top: 6px; line-height: 1.2; }
+  .now .from { font-size: clamp(15px, 3.8vw, 22px); color: #ddd; margin-top: 4px; line-height: 1.25; }
+  .now .from:empty, .now .artist:empty { display: none; }
+  .now .count { font-size: clamp(15px, 3.8vw, 22px); color: #aaa; margin-top: 6px; }
+
+  /* Previous / Play / Next stay in one row, even on a phone */
+  /* Icon buttons: plain drawn shapes, no text */
+  .icon-btn { display: flex; align-items: center; justify-content: center; padding: 0; color: #111; }
+  .icon-btn svg { fill: currentColor; display: block; }
+
+  .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .controls button { height: min(clamp(150px, 37vw, 200px), 24vh); }
+  .controls svg { width: 58%; max-width: 90px; height: auto; }
+  #btn-prev, #btn-next { background: #000; color: #ff8c00; border-color: #ff8c00; }
+  #btn-play { background: #1e88e5; color: #fff; border-color: #64b5f6; }
+  #btn-play svg { width: 46%; max-width: 80px; }
+  #btn-play.playing { background: #1565c0; border-color: #90caf9; animation: play-flash 1.2s ease-in-out infinite; }
+  /* Playing: the button gently flashes */
+  @keyframes play-flash {
+    0%, 100% { background: #1565c0; box-shadow: 0 0 0 0 rgba(100, 181, 246, 0); }
+    50%      { background: #42a5f5; box-shadow: 0 0 22px 6px rgba(100, 181, 246, 0.75); }
+  }
+  @media (prefers-reduced-motion: reduce) { #btn-play.playing { animation-duration: 2.4s; } }
+
+  /* Thumbs down / thumbs up */
+  .rate { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rate button { background: #3a3a3a; color: #cfcfcf; border-color: #555; height: min(clamp(50px, 12vw, 66px), 7.5vh); }
+  .rate svg { width: clamp(32px, 8.5vw, 46px); height: auto; }
+  /* Grey until pressed; pressing one hides the other until the next song */
+  #btn-like    { background: #2e7d32; color: #fff; border-color: #66bb6a; }
+  #btn-dislike { background: #c62828; color: #fff; border-color: #ef5350; }
+  /* Pressed: brighter, with a white edge */
+  #btn-like.on    { background: #43c84a; color: #fff; border-color: #fff; }
+  #btn-dislike.on { background: #ff3b30; color: #fff; border-color: #fff; }
+  .rate button.gone { visibility: hidden; }
+
+
+  .msg { text-align: center; font-size: clamp(20px, 5vw, 28px); margin-top: 16px; color: #ff6b6b; }
+
+  /* Big Back button, pinned to the bottom of the screen */
+  .back-bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 10px 16px calc(8px + env(safe-area-inset-bottom));
+    background: #111;
+    border-top: 3px solid #333;
+    z-index: 10;
+  }
+  .back-bar button, .back-bar a {
+    max-width: 820px; margin: 0 auto; display: block;
+    text-align: center; text-decoration: none; color: #111;
+    border: 3px solid #a8a8a8; border-radius: 18px;
+    font-family: inherit;
+    background: #c4c4c4;
+    font-size: clamp(20px, 5vw, 28px);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    -webkit-text-stroke: 1px #111;
+    padding: 8px 12px;
+  }
+  .back-bar > button + *, .back-bar > a + * { margin-top: 22px; }
+  .version {
+    max-width: 820px; margin: 6px auto 0 !important;
+    text-align: right; font-size: 13px; color: #777;
+  }
+  .back-bar [hidden] { display: none; }
+  /* No buttons showing: just the version number, no bar */
+  .back-bar.only-version { background: transparent; border-top: none; padding-top: 0; pointer-events: none; }
+
+  /* ── Splash screen ── */
+  .splash {
+    position: fixed; inset: 0; z-index: 100;
+    background: #111;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center;
+    transition: opacity 0.6s ease;
+  }
+  .splash.fade { opacity: 0; pointer-events: none; }
+  .splash .logo { width: min(60vw, 45vh, 320px); height: auto; display: block; }
+  .splash .splash-version { font-size: 13px; color: #777; margin-top: -6px; }
+  .splash .credit {
+    position: absolute; left: 16px; right: 16px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    font-size: clamp(15px, 3.8vw, 20px); color: #888;
+  }
+
+  /* ── HELP button (top of every screen) and help screen ── */
+  #btn-help { display: none; }   /* hidden for now — delete this line to bring it back */
+  #btn-help {
+    background: #ff3b30; color: #fff; border-color: #fff;
+    font-size: clamp(22px, 5.5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
+    padding: 8px 12px; margin-bottom: 14px;
+  }
+  .radio-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .btn-radio {
+    flex: 1 1 0; min-width: 0; background: #4a4a4a; color: #f2f2f2; border-color: #6e6e6e;
+    font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
+    padding: 8px 6px;
+  }
+  #btn-capdance   { background: #0d47a1; border-color: #5c8fe0; }
+  #btn-heartdance { background: #1976d2; border-color: #64b5f6; }
+  #btn-heart70s   { background: #b34700; border-color: #ff8a50; }
+  #btn-heart80s   { background: #d6004f; border-color: #ff5c93; }
+  #btn-gold       { background: #8a6508; border-color: #e0b84a; }
+  /* EMAIL under the radio buttons; CLOSE on its own further down.
+     Both full width, so the same length. */
+  #btn-close {
+    display: block; width: 100%; color: #fff;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
+    padding: 8px 12px;
+  }
+  /* ── Collapsible menu ── */
+  .menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .menu-btn {
+    background: #000; color: #ff8c00; border-color: #ff8c00;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
+    padding: 8px 12px; min-width: 0;
+  }
+  .menu-btn::after { content: " \25BE"; }                 /* ▾ closed */
+  .menu-btn[aria-expanded="true"] { background: #ff8c00; color: #111; }
+  .menu-btn[aria-expanded="true"]::after { content: " \25B4"; }  /* ▴ open */
+  .wide-menu { display: block; width: 100%; margin-top: 8px; }
+  .menu-row .menu-btn { height: clamp(84px, 22.8vw, 110px); }   /* RADIO / MORE: double height */
+  /* MORE open: hide the music controls and RADIO; MORE becomes BACK TO MUSIC */
+  #player.more-open .controls, #player.more-open .rate,
+  #player.more-open #btn-menu-radio, #player.more-open #panel-radio { display: none; }
+  #player.more-open .menu-row { grid-template-columns: 1fr; }
+  #player.more-open #btn-menu-more { height: auto; padding: 12px; }
+  #btn-menu-more[aria-expanded="true"]::after { content: none; }
+  #panel-howto { margin-top: 10px; }
+  #panel-howto[hidden] { display: none; }
+  .panel { margin-top: 8px; padding: 10px; border: 2px solid #333; border-radius: 18px; background: #1a1a1a; }
+  .panel[hidden] { display: none; }
+  .panel .radio-row, .panel .pair-row { margin-top: 0; }
+  #panel-more .wide-menu { margin-top: 8px; }
+  .howto { text-align: left; font-size: clamp(17px, 4.4vw, 24px); line-height: 1.35; }
+  .howto h2 { font-size: clamp(20px, 5vw, 28px); color: #ff8c00; margin: 4px 0 6px; }
+  .howto p { margin-bottom: 10px; color: #ddd; }
+  .howto .t-up { color: #66bb6a; font-weight: bold; }
+  .howto .t-down { color: #ef5350; font-weight: bold; }
+  #btn-feedback { background: #1565c0; border-color: #64b5f6; margin: 4px 0 10px; }
+  .howto .howto-version { text-align: right; color: #888; font-size: 15px; margin: 0; }
+  #version { display: none; }   /* the version now lives in HOW TO USE */
+  .recipes-layer { position: fixed; inset: 0; z-index: 95; background: #111; }
+  .recipes-layer[hidden] { display: none; }
+  .recipes-layer iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* CAMERA and EMAIL side by side, half width each */
+  .wide-btn {
+    display: block; width: 100%; margin-top: 8px; color: #fff;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
+    padding: 8px 12px;
+  }
+  .pair-row { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+  .pair-row button { margin-top: 0 !important; min-width: 0; }
+  #btn-camera {
+    display: block; width: 100%; margin-top: 8px; padding: 8px 12px;
+    background: #263238; color: #fff; border-color: #64b5f6;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
+  }
+  .photo-layer {
+    position: fixed; inset: 0; z-index: 96; background: #000;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .photo-layer[hidden] { display: none; }
+  .photo-layer img { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain; }
+  #btn-photo-save { background: #1565c0; color: #fff; border-color: #64b5f6; padding: 12px; }
+  #btn-photo-close { background: #c4c4c4; color: #111; border-color: #a8a8a8; padding: 12px; }
+  #btn-recipes {
+    display: block; width: 100%; margin-top: 8px; padding: 8px 12px;
+    background: #ef6c00; color: #fff; border-color: #ffa726;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
+  }
+  .pair-row #btn-camera { height: clamp(84px, 22.8vw, 110px); }   /* CAMERA: double height, full width */
+  /* RATE THIS APP: thin, black, bold white text */
+  #btn-rate {
+    display: block; width: 100%; padding: 8px 12px;
+    background: #263238; color: #fff; border-color: #64b5f6;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
+  }
+  .stars { display: flex; gap: 8px; margin-top: 10px; }
+  .stars[hidden] { display: none; }
+  .stars button {
+    flex: 1 1 0; min-width: 0; padding: 6px 0; background: #000; color: #ffd400;
+    border: 2px solid #555; border-radius: 12px; font-size: clamp(24px, 7vw, 36px); line-height: 1;
+  }
+  #btn-close { margin: 0 auto; background: #c62828; border-color: #ef5350; color: #fff; -webkit-text-stroke: 0; font-size: clamp(20px, 5vw, 30px); letter-spacing: 0.08em; width: 100%; }
+  .help {
+    position: fixed; inset: 0; z-index: 90;
+    background: #111;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    text-align: center;
+  }
+  .help[hidden] { display: none; }
+  .help .help-inner { width: 100%; max-width: 820px; display: flex; flex-direction: column; gap: 22px; }
+  #btn-send-help {
+    background: #ff3b30; color: #fff;
+    font-size: clamp(30px, 8.5vw, 48px); font-weight: 900; line-height: 1.2;
+    min-height: 40vh;
+  }
+  #btn-send-help:disabled { cursor: default; }
+  #btn-send-help.sent { background: #3ddc84; color: #111; }
+  .help .help-status { font-size: clamp(22px, 5.5vw, 30px); min-height: 1.4em; color: #ccc; }
+  .help .help-status a { color: #4fc3ff; }
+  #btn-help-close { background: #c4c4c4; }
+</style>
+</head>
+<body>
+<div class="splash" id="splash" onclick="hideSplash()">
+  <img class="logo" src="assets/dp-logo.webp" alt="dPaul">
+  <div class="splash-version" id="splash-version"></div>
+  <div class="credit">Developed by David Ahern - DPAUL 2026</div>
+</div>
+<div class="help" id="help" hidden role="dialog" aria-modal="true" aria-label="Help">
+  <div class="help-inner">
+    <button id="btn-send-help" onclick="sendHelp()">EMERGENCY ONLY</button>
+    <div class="help-status" id="help-status" aria-live="polite"></div>
+    <button id="btn-help-close" onclick="closeHelp()">GO BACK</button>
+  </div>
+</div>
+<div class="wrap">
+
+  <button id="btn-help" onclick="openHelp()">EMERGENCY ONLY</button>
+
+  <div id="player" hidden>
+    <!-- Genre buttons, filled in from ALBUMS -->
+    <div class="genres" id="genres" role="group" aria-label="Genre"></div>
+    <div class="now">
+      <div class="art"><img id="cover" alt="" hidden><div class="art-msg" id="art-msg" hidden>search for album art</div></div>
+      <div class="now-text">
+        <div class="track" id="track-name"></div>
+        <div class="artist" id="track-artist"></div>
+        <div class="from" id="track-from"></div>
+        <div class="count" id="track-count"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="icon-btn" id="btn-prev" onclick="prevTrack()" aria-label="Previous song">
+        <svg viewBox="0 0 100 60"><polygon points="50,0 50,60 0,30"/><polygon points="100,0 100,60 50,30"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-play" onclick="togglePlay()" aria-label="Play"></button>
+      <button class="icon-btn" id="btn-next" onclick="nextTrack()" aria-label="Next song">
+        <svg viewBox="0 0 100 60"><polygon points="0,0 0,60 50,30"/><polygon points="50,0 50,60 100,30"/></svg>
+      </button>
+    </div>
+
+    <div class="rate">
+      <button class="icon-btn" id="btn-dislike" onclick="dislikeSong()" aria-label="Don't like this song – skip it and never play it again">
+        <svg viewBox="0 0 24 24"><g transform="rotate(180 12 12)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></g></svg>
+      </button>
+      <button class="icon-btn" id="btn-like" onclick="toggleLike()" aria-label="Like this song" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
+      </button>
+    </div>
+
+    <!-- Menu: RADIO and MORE side by side. RADIO opens the stations
+         underneath. MORE swaps the player for a page of extras (the
+         controls and RADIO hide); its button becomes BACK TO MUSIC. -->
+    <div class="menu-row">
+      <button class="menu-btn" id="btn-menu-radio" onclick="toggleRadioPanel()" aria-expanded="false" aria-controls="panel-radio">RADIO</button>
+      <button class="menu-btn" id="btn-menu-more" onclick="toggleMore()" aria-expanded="false" aria-controls="panel-more">MORE</button>
+    </div>
+
+    <div class="panel" id="panel-radio" hidden>
+      <div class="radio-row" id="radio-row"></div>
+    </div>
+
+    <div class="panel" id="panel-more" hidden>
+      <div class="pair-row">
+        <button id="btn-camera" onclick="openCamera()">CAMERA</button>
+      </div>
+      <button id="btn-recipes" onclick="openRecipes()">STUDENT RECIPES</button>
+      <button id="btn-rate" class="wide-btn" onclick="toggleStars()">RATE APP</button>
+      <div class="stars" id="stars" hidden>
+        <button onclick="rateApp(1)" aria-label="1 star">★</button>
+        <button onclick="rateApp(2)" aria-label="2 stars">★</button>
+        <button onclick="rateApp(3)" aria-label="3 stars">★</button>
+        <button onclick="rateApp(4)" aria-label="4 stars">★</button>
+        <button onclick="rateApp(5)" aria-label="5 stars">★</button>
+      </div>
+
+      <button class="menu-btn wide-menu" id="btn-menu-howto" onclick="toggleHowto()" aria-expanded="false" aria-controls="panel-howto">HOW TO USE</button>
+      <div class="howto" id="panel-howto" hidden>
+        <h2>Thumbs</h2>
+        <p><span class="t-up">Thumbs up</span> — you like this song. Liked songs play first each time you open the music. Tap it again to undo.</p>
+        <p><span class="t-down">Thumbs down</span> — you don't like this song. It skips straight away and won't play again.</p>
+        <p>Your thumbs are remembered on this phone only.</p>
+        <h2>Buttons</h2>
+        <p><b>70's, 80's, CLUB CLASSICS</b> — pick the kind of music. Your choice is remembered for next time.</p>
+        <p><b>RADIO</b> — live stations to match the genre you picked. Tap a station to listen; tap <b>BACK TO MUSIC</b> to return to your songs.</p>
+        <p><b>MORE</b> — camera, student recipes, rate the app and this help. Tap <b>BACK TO MUSIC</b> to get the music buttons back.</p>
+        <button id="btn-feedback" class="wide-btn" onclick="sendFeedback()">SEND FEEDBACK</button>
+        <p class="howto-version" id="howto-version"></p>
+      </div>
+    </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" hidden onchange="gotPhoto(this)">
+
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="back-bar" id="back-bar">
+    <!-- CLOSE: pinned to the bottom so it never moves (player screen only) -->
+    <button id="btn-close" onclick="location.href='https://www.google.com'" hidden>CLOSE</button>
+    <div class="version" id="version"></div>
+  </div>
+
+  <audio id="audio" preload="auto" playsinline></audio>
+</div>
+<!-- Student recipes open on top of the player, so the music keeps playing -->
+<div class="photo-layer" id="photo-layer" hidden>
+  <img id="photo" alt="Your photo">
+  <button id="btn-photo-save" onclick="savePhoto()">SAVE PHOTO</button>
+  <button id="btn-photo-close" onclick="closePhoto()">BACK TO MUSIC</button>
+</div>
+<div class="recipes-layer" id="recipes-layer" hidden>
+  <iframe id="recipes-frame" title="Student recipes"></iframe>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   GENRES — one entry per genre button, songs all in /songs.
+
+   "stations" are the radio stations offered with that genre.
+   "tracks" is the list of MP3 file names, in play order.
+   Album art: the sleeve of the original album (or single) the song
+   first came out on, from assets/covers — named in "info" below.
+   Pictures embedded in the MP3s are ignored, as they are often from
+   compilations.
+   "years" gives the year each song first came out, shown next to
+   its name. Songs left out simply show no year.
+   ───────────────────────────────────────────────────────────── */
+const ALBUMS = [
+  {
+    id: "70s", title: "70's", folder: "songs", stations: ["heart70s","gold"],
+    tracks: [
+      "Another Brick In The Wall (Part 2).mp3",
+      "Are Friends Electric.mp3",
+      "Baker Street.mp3",
+      "Bohemian Rhapsody.mp3",
+      "Cars (Premier Mix).mp3",
+      "Copacabana (At the Copa).mp3",
+      "Dancing Queen(1).mp3",
+      "Dreams.mp3",
+      "Electricity.mp3",
+      "Goodbye Yellow Brick Road.mp3",
+      "Hanging On The Telephone(1).mp3",
+      "Livin_ Thing.mp3",
+      "Mandy(1).mp3",
+      "Rock With You.mp3",
+      "Sir Duke.mp3",
+      "The Model.mp3"
+    ],
+    years: {
+      "Another Brick In The Wall (Part 2).mp3": 1979,
+      "Are Friends Electric.mp3": 1979,
+      "Baker Street.mp3": 1978,
+      "Bohemian Rhapsody.mp3": 1975,
+      "Cars (Premier Mix).mp3": 1979,
+      "Copacabana (At the Copa).mp3": 1978,
+      "Dancing Queen(1).mp3": 1976,
+      "Dreams.mp3": 1977,
+      "Electricity.mp3": 1979,
+      "Goodbye Yellow Brick Road.mp3": 1973,
+      "Hanging On The Telephone(1).mp3": 1978,
+      "Livin_ Thing.mp3": 1976,
+      "Mandy(1).mp3": 1974,
+      "Rock With You.mp3": 1979,
+      "Sir Duke.mp3": 1976,
+      "The Model.mp3": 1978
+    },
+    // Artist, original album or single, its year, sleeve in assets/covers
+    info: {
+      "Another Brick In The Wall (Part 2).mp3": ["Pink Floyd","The Wall",1979,"pink-floyd-the-wall.jpg"],
+      "Are Friends Electric.mp3": ["Tubeway Army (Gary Numan)","Replicas",1979,"tubeway-army-replicas.jpg"],
+      "Baker Street.mp3": ["Gerry Rafferty","City to City",1978,"gerry-rafferty-city-to-city.jpg"],
+      "Bohemian Rhapsody.mp3": ["Queen","A Night at the Opera",1975,"queen-a-night-at-the-opera.jpg"],
+      "Cars (Premier Mix).mp3": ["Gary Numan","The Pleasure Principle",1979,"gary-numan-the-pleasure-principle.jpg"],
+      "Copacabana (At the Copa).mp3": ["Barry Manilow","Even Now",1978,"barry-manilow-even-now.jpg"],
+      "Dancing Queen(1).mp3": ["ABBA","Arrival",1976,"abba-arrival.jpg"],
+      "Dreams.mp3": ["Fleetwood Mac","Rumours",1977,"fleetwood-mac-rumours.jpg"],
+      "Electricity.mp3": ["Orchestral Manoeuvres in the Dark","Orchestral Manoeuvres in the Dark",1980,"orchestral-manoeuvres-in-the-dark-orchestral-manoeuvres-in-the-dark.jpg"],
+      "Goodbye Yellow Brick Road.mp3": ["Elton John","Goodbye Yellow Brick Road",1973,"elton-john-goodbye-yellow-brick-road.jpg"],
+      "Hanging On The Telephone(1).mp3": ["Blondie","Parallel Lines",1978,"blondie-parallel-lines.jpg"],
+      "Livin_ Thing.mp3": ["Electric Light Orchestra","A New World Record",1976,"electric-light-orchestra-a-new-world-record.jpg"],
+      "Mandy(1).mp3": ["Barry Manilow","Barry Manilow II",1974,"barry-manilow-barry-manilow-ii.jpg"],
+      "Rock With You.mp3": ["Michael Jackson","Off the Wall",1979,"michael-jackson-off-the-wall.jpg"],
+      "Sir Duke.mp3": ["Stevie Wonder","Songs in the Key of Life",1976,"stevie-wonder-songs-in-the-key-of-life.jpg"],
+      "The Model.mp3": ["Kraftwerk","The Man-Machine",1978,"kraftwerk-the-man-machine.jpg"]
+    }
+  },
+  {
+    id: "80s", title: "80's", folder: "songs", stations: ["heart80s","gold"],
+    tracks: [
+      "Bedsitter.mp3",
+      "Being Boiled.mp3",
+      "Bizarre Love Triangle.mp3",
+      "Blue Monday.mp3",
+      "Don_t Go.mp3",
+      "Don_t You Want Me.mp3",
+      "Enola Gay.mp3",
+      "Everything Counts.mp3",
+      "Everything_s Gone Green.mp3",
+      "Fade to Grey.mp3",
+      "Girls On Film.mp3",
+      "Hungry Like The Wolf.mp3",
+      "Is There Something I Should Know.mp3",
+      "Just Can_t Get Enough.mp3",
+      "Let Me Go.mp3",
+      "Living On The Ceiling.mp3",
+      "Love Action (I Believe In Love).mp3",
+      "Mad World.mp3",
+      "Mirror Man.mp3",
+      "New Life.mp3",
+      "New Song.mp3",
+      "Only You.mp3",
+      "Rio (US Album Remix) (2009 Digital Remaster).mp3",
+      "See You.mp3",
+      "Sleepwalk.mp3",
+      "Souvenir.mp3",
+      "Space Age Love Song.mp3",
+      "Tainted Love.mp3",
+      "Telegraph.mp3",
+      "Temptation.mp3",
+      "The Perfect Kiss.mp3",
+      "The Reflex.mp3",
+      "The Wild Boys.mp3",
+      "Too Shy.mp3",
+      "Torch.mp3",
+      "Vienna.mp3",
+      "Visions Of China.mp3",
+      "West End Girls.mp3",
+      "Why.mp3"
+    ],
+    years: {
+      "Bedsitter.mp3": 1981,
+      "Being Boiled.mp3": 1980,
+      "Bizarre Love Triangle.mp3": 1986,
+      "Blue Monday.mp3": 1983,
+      "Don_t Go.mp3": 1982,
+      "Don_t You Want Me.mp3": 1981,
+      "Enola Gay.mp3": 1980,
+      "Everything Counts.mp3": 1983,
+      "Everything_s Gone Green.mp3": 1981,
+      "Fade to Grey.mp3": 1980,
+      "Girls On Film.mp3": 1981,
+      "Hungry Like The Wolf.mp3": 1982,
+      "Is There Something I Should Know.mp3": 1983,
+      "Just Can_t Get Enough.mp3": 1981,
+      "Let Me Go.mp3": 1982,
+      "Living On The Ceiling.mp3": 1982,
+      "Love Action (I Believe In Love).mp3": 1981,
+      "Mad World.mp3": 1982,
+      "Mirror Man.mp3": 1982,
+      "New Life.mp3": 1981,
+      "New Song.mp3": 1983,
+      "Only You.mp3": 1982,
+      "Rio (US Album Remix) (2009 Digital Remaster).mp3": 1982,
+      "See You.mp3": 1982,
+      "Sleepwalk.mp3": 1980,
+      "Souvenir.mp3": 1981,
+      "Space Age Love Song.mp3": 1982,
+      "Tainted Love.mp3": 1981,
+      "Telegraph.mp3": 1983,
+      "Temptation.mp3": 1983,
+      "The Perfect Kiss.mp3": 1985,
+      "The Reflex.mp3": 1984,
+      "The Wild Boys.mp3": 1984,
+      "Too Shy.mp3": 1983,
+      "Torch.mp3": 1982,
+      "Vienna.mp3": 1980,
+      "Visions Of China.mp3": 1981,
+      "West End Girls.mp3": 1985,
+      "Why.mp3": 1984
+    },
+    // Artist, original album or single, its year, sleeve in assets/covers
+    info: {
+      "Bedsitter.mp3": ["Soft Cell","Non-Stop Erotic Cabaret",1981,"soft-cell-non-stop-erotic-cabaret.jpg"],
+      "Being Boiled.mp3": ["The Human League","Holiday '80",1980,"the-human-league-holiday-80.jpg"],
+      "Bizarre Love Triangle.mp3": ["New Order","Brotherhood",1986,"new-order-brotherhood.jpg"],
+      "Blue Monday.mp3": ["New Order","Blue Monday (single)",1983,"new-order-blue-monday.jpg"],
+      "Don_t Go.mp3": ["Yazoo","Upstairs at Eric's",1982,"yazoo-upstairs-at-eric-s.jpg"],
+      "Don_t You Want Me.mp3": ["The Human League","Dare",1981,"the-human-league-dare.jpg"],
+      "Enola Gay.mp3": ["Orchestral Manoeuvres in the Dark","Organisation",1980,"orchestral-manoeuvres-in-the-dark-organisation.jpg"],
+      "Everything Counts.mp3": ["Depeche Mode","Construction Time Again",1983,"depeche-mode-construction-time-again.jpg"],
+      "Everything_s Gone Green.mp3": ["New Order","Everything's Gone Green (single)",1981,"new-order-everything-s-gone-green.jpg"],
+      "Fade to Grey.mp3": ["Visage","Visage",1980,"visage-visage.jpg"],
+      "Girls On Film.mp3": ["Duran Duran","Duran Duran",1981,"duran-duran-duran-duran.jpg"],
+      "Hungry Like The Wolf.mp3": ["Duran Duran","Rio",1982,"duran-duran-rio.jpg"],
+      "Is There Something I Should Know.mp3": ["Duran Duran","Is There Something I Should Know? (single)",1983,"duran-duran-is-there-something-i-should-know.jpg"],
+      "Just Can_t Get Enough.mp3": ["Depeche Mode","Speak & Spell",1981,"depeche-mode-speak-spell.jpg"],
+      "Let Me Go.mp3": ["Heaven 17","The Luxury Gap",1983,"heaven-17-the-luxury-gap.jpg"],
+      "Living On The Ceiling.mp3": ["Blancmange","Happy Families",1982,"blancmange-happy-families.jpg"],
+      "Love Action (I Believe In Love).mp3": ["The Human League","Dare",1981,"the-human-league-dare.jpg"],
+      "Mad World.mp3": ["Tears for Fears","The Hurting",1983,"tears-for-fears-the-hurting.jpg"],
+      "Mirror Man.mp3": ["The Human League","Mirror Man (single)",1982,"the-human-league-mirror-man.jpg"],
+      "New Life.mp3": ["Depeche Mode","Speak & Spell",1981,"depeche-mode-speak-spell.jpg"],
+      "New Song.mp3": ["Howard Jones","New Song (single)",1983,"howard-jones-new-song.jpg"],
+      "Only You.mp3": ["Yazoo","Upstairs at Eric's",1982,"yazoo-upstairs-at-eric-s.jpg"],
+      "Rio (US Album Remix) (2009 Digital Remaster).mp3": ["Duran Duran","Rio",1982,"duran-duran-rio.jpg"],
+      "See You.mp3": ["Depeche Mode","A Broken Frame",1982,"depeche-mode-a-broken-frame.jpg"],
+      "Sleepwalk.mp3": ["Ultravox","Vienna",1980,"ultravox-vienna.jpg"],
+      "Souvenir.mp3": ["Orchestral Manoeuvres in the Dark","Architecture & Morality",1981,"orchestral-manoeuvres-in-the-dark-architecture-morality.jpg"],
+      "Space Age Love Song.mp3": ["A Flock of Seagulls","A Flock of Seagulls",1982,"a-flock-of-seagulls-a-flock-of-seagulls.jpg"],
+      "Tainted Love.mp3": ["Soft Cell","Non-Stop Erotic Cabaret",1981,"soft-cell-non-stop-erotic-cabaret.jpg"],
+      "Telegraph.mp3": ["Orchestral Manoeuvres in the Dark","Dazzle Ships",1983,"orchestral-manoeuvres-in-the-dark-dazzle-ships.jpg"],
+      "Temptation.mp3": ["Heaven 17","The Luxury Gap",1983,"heaven-17-the-luxury-gap.jpg"],
+      "The Perfect Kiss.mp3": ["New Order","Low-Life",1985,"new-order-low-life.jpg"],
+      "The Reflex.mp3": ["Duran Duran","Seven and the Ragged Tiger",1983,"duran-duran-seven-and-the-ragged-tiger.jpg"],
+      "The Wild Boys.mp3": ["Duran Duran","Arena",1984,"duran-duran-arena.jpg"],
+      "Too Shy.mp3": ["Kajagoogoo","White Feathers",1983,"kajagoogoo-white-feathers.jpg"],
+      "Torch.mp3": ["Soft Cell","Torch (single)",1982,null],
+      "Vienna.mp3": ["Ultravox","Vienna",1980,"ultravox-vienna.jpg"],
+      "Visions Of China.mp3": ["Japan","Tin Drum",1981,"japan-tin-drum.jpg"],
+      "West End Girls.mp3": ["Pet Shop Boys","Please",1986,"pet-shop-boys-please.jpg"],
+      "Why.mp3": ["Bronski Beat","The Age of Consent",1984,"bronski-beat-the-age-of-consent.jpg"]
+    }
+  },
+  {
+    id: "club", title: "Club Classics", folder: "songs", stations: ["capdance","heartdance"],
+    tracks: [
+      "(I Wanna Give You) Devotion.mp3",
+      "1998 (Paul van Dyk Mix).mp3",
+      "Bellissima.mp3",
+      "Born Slippy .NUXX.mp3",
+      "Bullet In The Gun.mp3",
+      "Cafe Del Mar (Three N One Mix).mp3",
+      "Chic-O-Laa (H-Foundation Remix).mp3",
+      "Children.mp3",
+      "Cliffhanger.mp3",
+      "Closer Than Close.mp3",
+      "Columbia.mp3",
+      "Cübik.mp3",
+      "Del De Go Go.mp3",
+      "Dirty Dozen.mp3",
+      "Don_t You Want Me ('95 Remix).mp3",
+      "Dreamer (2_ Deep Pan Mix).mp3",
+      "El Ef Oh!.mp3",
+      "Feeling the Sunrise (Up Mix).mp3",
+      "Folie A Deux (Klub Mix).mp3",
+      "For An Angel '98.mp3",
+      "Freak Like Me.mp3",
+      "Free (Mood II Swing Mix).mp3",
+      "Freebase.mp3",
+      "Gamemaster (Signum Remix).mp3",
+      "Gouryella.mp3",
+      "Greece 2000.mp3",
+      "Gypsy Woman (La Da Dee).mp3",
+      "Hideaway.mp3",
+      "Insomnia (De Donatis Remix).mp3",
+      "Let Me Be Your Fantasy (Ruffer Mix).mp3",
+      "Move Any Mountain.mp3",
+      "Offshore '97.mp3",
+      "Plastic Dreams.mp3",
+      "Please Don_t Turn Me On.mp3",
+      "Push the Feeling On.mp3",
+      "Re-Rewind.mp3",
+      "Rhythm Is a Mystery.mp3",
+      "Saltwater (Tomski vs. Disco Citizens Remix).mp3",
+      "Sing It Back (Boris Musical Mix).mp3",
+      "Storm.mp3",
+      "Sweet Harmony.mp3",
+      "Teardrops.mp3",
+      "The Bomb!.mp3",
+      "Toca Me.mp3",
+      "You Don_t Know Me.mp3"
+    ],
+    years: {
+      "(I Wanna Give You) Devotion.mp3": 1991,
+      "1998 (Paul van Dyk Mix).mp3": 1998,
+      "Bellissima.mp3": 1997,
+      "Born Slippy .NUXX.mp3": 1995,
+      "Bullet In The Gun.mp3": 1999,
+      "Cafe Del Mar (Three N One Mix).mp3": 1993,
+      "Chic-O-Laa (H-Foundation Remix).mp3": 2000,
+      "Children.mp3": 1995,
+      "Cliffhanger.mp3": 2001,
+      "Closer Than Close.mp3": 1997,
+      "Columbia.mp3": 2000,
+      "Cübik.mp3": 1990,
+      "Del De Go Go.mp3": 1994,
+      "Dirty Dozen.mp3": 1998,
+      "Don_t You Want Me ('95 Remix).mp3": 1992,
+      "Dreamer (2_ Deep Pan Mix).mp3": 1994,
+      "El Ef Oh!.mp3": 1991,
+      "Feeling the Sunrise (Up Mix).mp3": 2002,
+      "Folie A Deux (Klub Mix).mp3": 2000,
+      "For An Angel '98.mp3": 1994,
+      "Freak Like Me.mp3": 2000,
+      "Free (Mood II Swing Mix).mp3": 1997,
+      "Freebase.mp3": 2000,
+      "Gamemaster (Signum Remix).mp3": 1997,
+      "Gouryella.mp3": 1999,
+      "Greece 2000.mp3": 1998,
+      "Gypsy Woman (La Da Dee).mp3": 1991,
+      "Hideaway.mp3": 1995,
+      "Insomnia (De Donatis Remix).mp3": 1995,
+      "Let Me Be Your Fantasy (Ruffer Mix).mp3": 1992,
+      "Move Any Mountain.mp3": 1991,
+      "Offshore '97.mp3": 1996,
+      "Plastic Dreams.mp3": 1992,
+      "Please Don_t Turn Me On.mp3": 2000,
+      "Push the Feeling On.mp3": 1992,
+      "Re-Rewind.mp3": 1999,
+      "Rhythm Is a Mystery.mp3": 1991,
+      "Saltwater (Tomski vs. Disco Citizens Remix).mp3": 1999,
+      "Sing It Back (Boris Musical Mix).mp3": 1998,
+      "Storm.mp3": 1998,
+      "Sweet Harmony.mp3": 1992,
+      "Teardrops.mp3": 1998,
+      "The Bomb!.mp3": 1995,
+      "Toca Me.mp3": 1999,
+      "You Don_t Know Me.mp3": 1999
+    },
+    // Artist, original album or single, its year, sleeve in assets/covers
+    info: {
+      "(I Wanna Give You) Devotion.mp3": ["Nomad feat. MC Mikee Freedom","Changing Cabins",1991,"nomad-changing-cabins.jpg"],
+      "1998 (Paul van Dyk Mix).mp3": ["Binary Finary","1998 (single)",1998,"binary-finary-1998.jpg"],
+      "Bellissima.mp3": ["DJ Quicksilver","Bellissima (single)",1997,"dj-quicksilver-bellissima.jpg"],
+      "Born Slippy .NUXX.mp3": ["Underworld","Born Slippy (single)",1995,"underworld-born-slippy-nuxx.jpg"],
+      "Bullet In The Gun.mp3": ["Planet Perfecto","Bullet in the Gun (single)",1999,"planet-perfecto-bullet-in-the-gun.jpg"],
+      "Cafe Del Mar (Three N One Mix).mp3": ["Energy 52","Café del Mar (single)",1993,"energy-52-caf-del-mar.jpg"],
+      "Chic-O-Laa (H-Foundation Remix).mp3": ["Silicone Soul","...A Soul Thing",2000,"silicone-soul-a-soul-thing.jpg"],
+      "Children.mp3": ["Robert Miles","Dreamland",1996,"robert-miles-dreamland.jpg"],
+      "Cliffhanger.mp3": ["Thomas Penton","Cliffhanger (single)",2001,null],
+      "Closer Than Close.mp3": ["Rosie Gaines","Closer Than Close (single)",1997,"rosie-gaines-closer-than-close.jpg"],
+      "Columbia.mp3": ["Paul van Dyk","Out There and Back",2000,"paul-van-dyk-out-there-and-back.jpg"],
+      "Cübik.mp3": ["808 State","Cübik (single)",1990,"808-state-c-bik.jpg"],
+      "Del De Go Go.mp3": ["Tek 9","Del Die GoGo (single)",1994,null],
+      "Dirty Dozen.mp3": ["London Elektricity","Pull the Plug",1998,"london-elektricity-pull-the-plug.jpg"],
+      "Don_t You Want Me ('95 Remix).mp3": ["Felix","Don't You Want Me (single)",1992,"felix-don-t-you-want-me.jpg"],
+      "Dreamer (2_ Deep Pan Mix).mp3": ["Livin' Joy","Dreamer (single)",1994,"livin-joy-dreamer.jpg"],
+      "El Ef Oh!.mp3": ["LFO","Frequencies",1991,"lfo-frequencies.jpg"],
+      "Feeling the Sunrise (Up Mix).mp3": ["G&M Project","Feeling the Sunrise (single)",2002,"g-m-project-feeling-the-sunrise.jpg"],
+      "Folie A Deux (Klub Mix).mp3": ["S.H.O.K.K.","Folie à deux (single)",2000,null],
+      "For An Angel '98.mp3": ["Paul van Dyk","45 RPM",1994,"paul-van-dyk-45-rpm.jpg"],
+      "Freak Like Me.mp3": ["Tru Faith & Dub Conspiracy","Freak Like Me (single)",2000,"tru-faith-dub-conspiracy-freak-like-me.jpg"],
+      "Free (Mood II Swing Mix).mp3": ["Ultra Naté","Situation: Critical",1998,"ultra-nat-situation-critical.jpg"],
+      "Freebase.mp3": ["Tall Paul","Freebase (single)",2000,"tall-paul-freebase.jpg"],
+      "Gamemaster (Signum Remix).mp3": ["Lost Tribe","Gamemaster (single)",1997,"lost-tribe-gamemaster.jpg"],
+      "Gouryella.mp3": ["Gouryella","Gouryella (single)",1999,"gouryella-gouryella.jpg"],
+      "Greece 2000.mp3": ["Three Drives","Greece 2000 (single)",1998,"three-drives-greece-2000.jpg"],
+      "Gypsy Woman (La Da Dee).mp3": ["Crystal Waters","Surprise",1991,"crystal-waters-surprise.jpg"],
+      "Hideaway.mp3": ["De'Lacy","Hideaway (single)",1995,"de-lacy-hideaway.jpg"],
+      "Insomnia (De Donatis Remix).mp3": ["Faithless","Reverence",1996,"faithless-reverence.jpg"],
+      "Let Me Be Your Fantasy (Ruffer Mix).mp3": ["Baby D","Let Me Be Your Fantasy (single)",1992,"baby-d-let-me-be-your-fantasy.jpg"],
+      "Move Any Mountain.mp3": ["The Shamen","Move Any Mountain (single)",1991,"the-shamen-move-any-mountain.jpg"],
+      "Offshore '97.mp3": ["Chicane","Far from the Maddening Crowds",1997,"chicane-far-from-the-maddening-crowds.jpg"],
+      "Plastic Dreams.mp3": ["Jaydee","Plastic Dreams (single)",1992,"jaydee-plastic-dreams.jpg"],
+      "Please Don_t Turn Me On.mp3": ["Artful Dodger feat. Lifford","It's All About the Stragglers",2000,"artful-dodger-it-s-all-about-the-stragglers.jpg"],
+      "Push the Feeling On.mp3": ["Nightcrawlers","Push the Feeling On (single)",1992,"nightcrawlers-push-the-feeling-on.jpg"],
+      "Re-Rewind.mp3": ["Artful Dodger feat. Craig David","Re-Rewind the Crowd Say Bo Selecta (single)",1999,"artful-dodger-re-rewind-the-crowd-say-bo-selecta.jpg"],
+      "Rhythm Is a Mystery.mp3": ["K-Klass","Rhythm Is a Mystery (single)",1991,"k-klass-rhythm-is-a-mystery.jpg"],
+      "Saltwater (Tomski vs. Disco Citizens Remix).mp3": ["Chicane feat. Máire Brennan","Behind the Sun",2000,"chicane-behind-the-sun.jpg"],
+      "Sing It Back (Boris Musical Mix).mp3": ["Moloko","I Am Not a Doctor",1998,"moloko-i-am-not-a-doctor.jpg"],
+      "Storm.mp3": ["Storm","Storm (single)",1998,"storm-storm.jpg"],
+      "Sweet Harmony.mp3": ["Liquid","Sweet Harmony (single)",1992,"liquid-sweet-harmony.jpg"],
+      "Teardrops.mp3": ["Lovestation","Teardrops (single)",1998,"lovestation-teardrops.jpg"],
+      "The Bomb!.mp3": ["The Bucketheads","All in the Mind",1995,"the-bucketheads-all-in-the-mind.jpg"],
+      "Toca Me.mp3": ["Fragma","Toca Me (single)",1999,"fragma-toca-me.jpg"],
+      "You Don_t Know Me.mp3": ["Armand van Helden feat. Duane Harden","2 Future 4 U",1998,"armand-van-helden-2-future-4-u.jpg"]
+    }
+  }
+];
+
+const PLAY_ICON  = '<svg viewBox="0 0 52 60"><polygon points="0,0 0,60 52,30"/></svg>';
+const PAUSE_ICON = '<svg viewBox="0 0 52 60"><rect x="0" y="0" width="18" height="60" rx="2"/><rect x="34" y="0" width="18" height="60" rx="2"/></svg>';
+
+const audio = document.getElementById('audio');
+const playBtn = document.getElementById('btn-play');
+const msg = document.getElementById('msg');
+
+let album = null;
+let trackIndex = 0;   // position in the shuffled play order
+let order = [];       // album.tracks indexes, shuffled each time an album opens
+
+// ── Thumbs up / down ──
+// Saved on this phone/tablet only. 1 = liked, -1 = disliked.
+let ratings = {};
+try { ratings = JSON.parse(localStorage.getItem('ratings')) || {}; } catch (e) {}
+function saveRatings() { try { localStorage.setItem('ratings', JSON.stringify(ratings)); } catch (e) {} }
+function ratingKey(file) { return album.folder + '/' + file; }
+function ratingOf(file) { return ratings[ratingKey(file)] || 0; }
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Liked songs first (shuffled), then the rest (shuffled).
+// Disliked songs are left out altogether.
+function shuffledOrder() {
+  const idx = album.tracks.map((_, i) => i);
+  const liked = idx.filter(i => ratingOf(album.tracks[i]) > 0);
+  const other = idx.filter(i => ratingOf(album.tracks[i]) === 0);
+  const result = shuffle(liked).concat(shuffle(other));
+  if (result.length) return result;
+  // Every song disliked — forget those dislikes rather than play nothing
+  album.tracks.forEach(f => delete ratings[ratingKey(f)]);
+  saveRatings();
+  return shuffle(idx);
+}
+
+function toggleLike() {
+  if (!album) return;
+  const k = ratingKey(currentFile());
+  if (ratings[k] > 0) delete ratings[k]; else ratings[k] = 1;
+  saveRatings();
+  updateLikeButton();
+}
+
+function dislikeSong() {
+  if (!album) return;
+  ratings[ratingKey(currentFile())] = -1;
+  saveRatings();
+  // Show it pressed (and thumbs up gone) for a moment, then skip
+  document.getElementById('btn-dislike').classList.add('on');
+  document.getElementById('btn-like').classList.add('gone');
+  document.querySelectorAll('.rate button').forEach(b => b.disabled = true);
+  const file = currentFile(), from = album;
+  setTimeout(() => skipDisliked(file, from), 600);
+}
+
+function skipDisliked(file, from) {
+  document.querySelectorAll('.rate button').forEach(b => b.disabled = false);
+  if (album !== from) return;                  // genre changed meanwhile
+  if (currentFile() !== file) {                // moved on meanwhile: just drop it from the list
+    const pos = order.findIndex(i => album.tracks[i] === file);
+    if (pos >= 0) { order.splice(pos, 1); if (pos < trackIndex) trackIndex--; }
+    if (!order.length) { order = shuffledOrder(); trackIndex = 0; }
+    document.getElementById('track-count').textContent =
+      'Song ' + (trackIndex + 1) + ' of ' + order.length;
+    return;
+  }
+  order.splice(trackIndex, 1);                 // never comes round again
+  if (!order.length) order = shuffledOrder();
+  if (trackIndex >= order.length) trackIndex = 0;
+  loadTrack(trackIndex, true);                 // skip straight to the next one
+}
+
+function updateLikeButton() {
+  const liked = album && ratingOf(currentFile()) > 0;
+  const btn = document.getElementById('btn-like');
+  btn.classList.toggle('on', !!liked);
+  btn.classList.remove('gone');
+  btn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+  const down = document.getElementById('btn-dislike');
+  down.classList.remove('on');
+  down.classList.toggle('gone', !!liked);   // thumbs up pressed: thumbs down hides
+}
+
+function currentFile() { return album.tracks[order[trackIndex]]; }
+
+function fileUrl(folder, file) {
+  return encodeURIComponent(folder) + '/' + encodeURIComponent(file);
+}
+
+// Display name: drop ".mp3", " copy", a leading track number, tidy underscores
+function niceName(file) {
+  return file
+    .replace(/\.mp3$/i, '')
+    .replace(/\s+copy(\s+\d+)?$/i, '')
+    .replace(/\s*\(\d+\)$/, '')
+    .replace(/_t\b/g, "'t").replace(/_s\b/g, "'s")
+    .replace(/_/g, ' ');
+}
+
+function buildGenres() {
+  const row = document.getElementById('genres');
+  ALBUMS.forEach((a, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = a.title.toUpperCase();
+    btn.setAttribute('aria-pressed', 'false');
+    btn.onclick = () => pickGenre(i);
+    row.appendChild(btn);
+  });
+}
+
+// Tapping a genre plays it. Tapping the one already on does nothing,
+// unless the radio is playing: then it goes back to the songs.
+function pickGenre(i) {
+  if (album !== ALBUMS[i]) { openAlbum(i); return; }
+  if (radio) loadTrack(trackIndex, true);
+}
+
+// The genre's own two radio stations
+function buildStations() {
+  const row = document.getElementById('radio-row');
+  row.innerHTML = '';
+  album.stations.forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-radio';
+    btn.id = 'btn-' + key;
+    btn.textContent = STATIONS[key].label;
+    btn.onclick = () => toggleRadio(key);
+    row.appendChild(btn);
+  });
+}
+
+function openAlbum(i, autoplay = true) {
+  album = ALBUMS[i];
+  try { localStorage.setItem('genre', album.id); } catch (e) {}
+  [...document.getElementById('genres').children].forEach((b, n) =>
+    b.setAttribute('aria-pressed', n === i ? 'true' : 'false'));
+  buildStations();
+  order = shuffledOrder();   // a different song first each time
+  // Never open on the song that was on last time (or a liked song
+  // always coming first): swap it with a random later one.
+  let last = null;
+  try { last = localStorage.getItem('lastSong'); } catch (e) {}
+  if (order.length > 1 && ratingKey(album.tracks[order[0]]) === last) {
+    const j = 1 + Math.floor(Math.random() * (order.length - 1));
+    [order[0], order[j]] = [order[j], order[0]];
+  }
+
+
+  showPlayer();
+  loadTrack(0, autoplay);
+}
+
+// CLOSE shows on the player screen, except while HOW TO USE is open
+function updateClose() {
+  document.getElementById('btn-close').hidden =
+    document.getElementById('player').hidden || !document.getElementById('panel-howto').hidden;
+  fitBackBar();
+}
+
+function showPlayer() {
+  document.getElementById('player').hidden = false;
+  updateClose();
+  window.scrollTo(0, 0);
+}
+
+function loadTrack(i, autoplay) {
+  if (!album || !order.length) return;
+  trackIndex = (i + order.length) % order.length;
+  setRadioMode(false);
+  const file = currentFile();
+  try { localStorage.setItem('lastSong', ratingKey(file)); } catch (e) {}
+  audio.src = fileUrl(album.folder, file);
+  showArt(file);
+  const nameEl = document.getElementById('track-name');
+  nameEl.textContent = niceName(file);
+  const year = album.years && album.years[file];
+  if (year) {
+    const y = document.createElement('span');
+    y.className = 'year';
+    y.textContent = ' (' + year + ')';
+    nameEl.appendChild(y);
+  }
+  const inf = trackInfo(file);
+  document.getElementById('track-artist').textContent = inf ? inf[0] : '';
+  document.getElementById('track-from').textContent = inf
+    ? (inf[1].endsWith('(single)') ? 'Single: ' + inf[1].replace(/\s*\(single\)$/, '')
+                                   : 'Album: ' + inf[1]) + ' (' + inf[2] + ')'
+    : '';
+  document.getElementById('track-count').textContent =
+    'Song ' + (trackIndex + 1) + ' of ' + order.length;
+  updateLikeButton();
+  msg.textContent = '';
+  if (autoplay) play(); else updatePlayButton();
+}
+
+// ── Album art ──
+// Picture embedded in the MP3 first; failing that the album's cover
+// image (cover.jpg unless the ALBUMS list names another); failing that,
+// nothing — the page simply has no picture.
+const coverEl = document.getElementById('cover');
+let artToken = 0;
+
+// No picture (none for this song, it failed, or it still hasn't loaded
+// after a minute): a plain white-label record fills the box instead.
+let artTimer = null;
+function artMissing() {
+  const artMsg = document.getElementById('art-msg');
+  coverEl.hidden = true;
+  artMsg.textContent = 'no artwork';   // read out by screen readers only
+  artMsg.classList.add('white-label');
+  artMsg.hidden = false;
+}
+function setArt(src) {
+  const artMsg = document.getElementById('art-msg');
+  clearTimeout(artTimer);
+  artMsg.classList.remove('flash', 'white-label');
+  artMsg.textContent = 'search for album art';
+  if (!src) { coverEl.removeAttribute('src'); artMissing(); updateMediaSession(null); return; }
+  // Shown while the picture loads
+  coverEl.hidden = true; artMsg.hidden = false;
+  artTimer = setTimeout(artMissing, 60000);
+  coverEl.onerror = () => { clearTimeout(artTimer); artMissing(); };
+  coverEl.onload = () => { clearTimeout(artTimer); artMsg.classList.remove('flash'); coverEl.hidden = false; artMsg.hidden = true; };
+  coverEl.src = src;
+  updateMediaSession(src);
+}
+
+function trackInfo(file) { return album && album.info && album.info[file]; }
+
+// Original sleeve for this song, or no picture if there isn't one
+function showArt(file) {
+  artToken++;
+  const inf = trackInfo(file);
+  setArt(inf && inf[3] ? 'assets/covers/' + encodeURIComponent(inf[3]) : null);
+}
+
+function updateMediaSession(artSrc) {
+  if (!('mediaSession' in navigator) || !album || radio) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: niceName(currentFile()),
+    artist: (trackInfo(currentFile()) || [])[0] || '',
+    album: (trackInfo(currentFile()) || [])[1] || album.title,
+    artwork: artSrc ? [{ src: new URL(artSrc, location.href).href }] : []
+  });
+}
+
+// ── Radio stations ──
+// Plays a live stream through the same player, so music and radio
+// never play at once. Tapping the playing station's button again (or
+// a skip button) goes back to the songs.
+const STATIONS = {
+  capdance: { name: 'Capital Dance', label: 'CAPITAL DANCE', url: 'https://media-ssl.musicradio.com/CapitalDanceMP3', art: 'assets/capdance.svg' },
+  heartdance: { name: 'Heart Dance', label: 'HEART DANCE', url: 'https://media-ssl.musicradio.com/HeartDanceMP3', art: 'assets/heartdance.svg' },
+  heart70s: { name: 'Heart 70s', label: 'HEART 70s', url: 'https://media-ssl.musicradio.com/Heart70sMP3', art: 'assets/heart70s.svg' },
+  heart80s: { name: 'Heart 80s', label: 'HEART 80s', url: 'https://media-ssl.musicradio.com/Heart80sMP3', art: 'assets/heart80s.svg' },
+  gold: { name: 'Gold Radio', label: 'GOLD RADIO', url: 'https://media-ssl.musicradio.com/GoldMP3', art: 'assets/gold.svg' }
+};
+let radio = null;                              // key of the station playing, or null for music
+
+function setRadioMode(key) {
+  radio = key || null;
+  for (const k of album.stations) {
+    document.getElementById('btn-' + k).textContent = radio === k ? 'BACK TO MUSIC' : STATIONS[k].label;
+  }
+  document.querySelector('.rate').style.visibility = radio ? 'hidden' : '';
+}
+
+function toggleRadio(key) {
+  if (radio === key) { loadTrack(trackIndex, true); return; }
+  const st = STATIONS[key];
+  setRadioMode(key);
+  artToken++;                                  // ignore any song picture still loading
+  setArt(st.art);
+  document.getElementById('track-name').textContent = st.name;
+  document.getElementById('track-artist').textContent = '';
+  document.getElementById('track-from').textContent = '';
+  document.getElementById('track-count').textContent = 'Live';
+  msg.textContent = '';
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: st.name, album: 'Live',
+      artwork: [{ src: new URL(st.art, location.href).href }]
+    });
+  }
+  audio.src = st.url;
+  play();
+}
+
+function play() {
+  // Live radio: reconnect so it carries on from now, not from the pause
+  if (radio && audio.paused) audio.src = STATIONS[radio].url;
+  // Phones sometimes block sound until a button is pressed — if so,
+  // the PLAY button is left showing so one tap starts it.
+  audio.play().catch(updatePlayButton);
+}
+
+function togglePlay() { if (audio.paused) play(); else audio.pause(); }
+function nextTrack() { loadTrack(radio ? trackIndex : trackIndex + 1, true); }
+
+function prevTrack() {
+  // A few seconds in, Prev restarts the song, like a CD player
+  if (radio) { loadTrack(trackIndex, true); return; }
+  if (audio.currentTime > 5) { audio.currentTime = 0; return; }
+  loadTrack(trackIndex - 1, true);
+}
+
+
+function updatePlayButton() {
+  const playing = !audio.paused;
+  playBtn.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
+  playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  playBtn.classList.toggle('playing', playing);
+}
+
+audio.addEventListener('play', updatePlayButton);
+audio.addEventListener('pause', updatePlayButton);
+audio.addEventListener('ended', () => {
+  if (radio) { updatePlayButton(); return; }
+  if (trackIndex < order.length - 1) nextTrack();
+  else updatePlayButton();
+});
+audio.addEventListener('error', () => {
+  msg.textContent = radio ? STATIONS[radio].name + ' could not be reached.' : 'This song could not be found.';
+  updatePlayButton();
+});
+
+// Lock-screen / headphone controls on phones
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('play', play);
+  navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+  navigator.mediaSession.setActionHandler('nexttrack', nextTrack);
+  navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
+}
+
+// Keep page content clear of the bottom bar, whatever is showing in it
+function fitBackBar() {
+  const bar = document.getElementById('back-bar');
+  const empty = [...bar.children].every(el => el.hidden || el.id === 'version');
+  bar.classList.toggle('only-version', empty);
+  document.body.style.paddingBottom = (bar.offsetHeight + 16) + 'px';
+}
+window.addEventListener('resize', fitBackBar);
+
+// Version number lives in the <meta name="version"> tag at the top
+document.getElementById('version').textContent =
+  'v' + (document.querySelector('meta[name="version"]')?.content || '');
+
+// ── HELP ──
+// Pressing HELP stops the music and shows the help screen. The big
+// button there sends an email through FormSubmit.co. The very first
+// one sent makes FormSubmit email the owner a link to switch it on.
+const HELP_EMAIL = 'davidpaulahern@gmail.com';
+
+// RATE THIS APP: tap it to show five stars; picking one opens the
+// email app with that rating ready to send.
+function toggleStars() {
+  const st = document.getElementById('stars');
+  st.hidden = !st.hidden;
+}
+function rateApp(n) {
+  document.getElementById('stars').hidden = true;
+  const stars = '★'.repeat(n) + '☆'.repeat(5 - n);
+  location.href = 'mailto:' + HELP_EMAIL +
+    '?subject=' + encodeURIComponent('dPaul Music rating: ' + n + ' out of 5') +
+    '&body=' + encodeURIComponent('I rate dPaul Music ' + stars + ' (' + n + '/5).\n\n');
+}
+
+// ── Menu: RADIO opens the stations underneath; MORE swaps the
+// player buttons for the extras page, and back again ──
+function setOpen(btnId, panelId, open) {
+  document.getElementById(panelId).hidden = !open;
+  document.getElementById(btnId).setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function toggleRadioPanel() {
+  setOpen('btn-menu-radio', 'panel-radio', document.getElementById('panel-radio').hidden);
+  // Small phones: bring the stations out from behind CLOSE
+  if (!document.getElementById('panel-radio').hidden) window.scrollTo(0, document.documentElement.scrollHeight);
+}
+function toggleMore() {
+  const open = document.getElementById('panel-more').hidden;
+  setOpen('btn-menu-more', 'panel-more', open);
+  document.getElementById('player').classList.toggle('more-open', open);
+  document.getElementById('btn-menu-more').textContent = open ? 'BACK TO MUSIC' : 'MORE';
+  if (open) setOpen('btn-menu-radio', 'panel-radio', false);
+  else { document.getElementById('stars').hidden = true; setOpen('btn-menu-howto', 'panel-howto', false); }
+  updateClose();
+  window.scrollTo(0, 0);
+}
+function toggleHowto() {
+  const open = document.getElementById('panel-howto').hidden;
+  setOpen('btn-menu-howto', 'panel-howto', open);
+  updateClose();
+  if (open) document.getElementById('panel-howto').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// SEND FEEDBACK (in HOW TO USE): a new email with the version filled in
+function sendFeedback() {
+  const v = document.querySelector('meta[name="version"]')?.content || '';
+  location.href = 'mailto:' + HELP_EMAIL +
+    '?subject=' + encodeURIComponent('dPaul Music feedback (v' + v + ')');
+}
+document.getElementById('splash-version').textContent =
+  'v' + (document.querySelector('meta[name="version"]')?.content || '');
+document.getElementById('howto-version').textContent =
+  'Version ' + (document.querySelector('meta[name="version"]')?.content || '');
+
+// STUDENT RECIPES: shown over the player (not a new page) so the
+// music carries on. The recipes page's BACK TO MUSIC closes it.
+function openRecipes() {
+  const frame = document.getElementById('recipes-frame');
+  if (!frame.src) frame.src = 'recipes.html';
+  document.getElementById('recipes-layer').hidden = false;
+}
+function closeRecipes() {
+  document.getElementById('recipes-layer').hidden = true;
+  window.scrollTo(0, 0);
+}
+window.addEventListener('message', e => {
+  if (e.origin === location.origin && e.data === 'close-recipes') closeRecipes();
+});
+
+// CAMERA: opens the phone's own camera. The photo is then shown with
+// SAVE PHOTO (the phone's share sheet, where "Save Image" puts it in
+// Photos) — browsers can't save to the camera roll by themselves.
+let photoFile = null, photoUrl = null;
+function openCamera() { document.getElementById('camera-input').click(); }
+function gotPhoto(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  photoFile = f;
+  if (photoUrl) URL.revokeObjectURL(photoUrl);
+  photoUrl = URL.createObjectURL(f);
+  document.getElementById('photo').src = photoUrl;
+  document.getElementById('photo-layer').hidden = false;
+}
+async function savePhoto() {
+  if (!photoFile) return;
+  const file = new File([photoFile], 'photo-' + Date.now() + '.jpg', { type: photoFile.type || 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch (e) {}   // cancelled: nothing to do
+    return;
+  }
+  const a = document.createElement('a');   // no share sheet: download it instead
+  a.href = photoUrl; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function closePhoto() { document.getElementById('photo-layer').hidden = true; }
+
+let helpSending = false;
+let helpLocation = null;   // Promise of { link, accuracy } or { error }
+
+// Asks the phone where it is. The phone may ask "Allow location?" the
+// first time. Never rejects: gives back either a place or a reason.
+function findLocation() {
+  return new Promise(resolve => {
+    if (!('geolocation' in navigator)) return resolve({ error: 'not supported on this device' });
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+        resolve({
+          link: 'https://www.google.com/maps?q=' + lat.toFixed(6) + ',' + lon.toFixed(6),
+          accuracy: 'about ' + Math.round(accuracy) + ' metres'
+        });
+      },
+      err => resolve({ error: err.code === 1 ? 'permission was refused' :
+                              err.code === 3 ? 'took too long to find' : 'could not be found' }),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  });
+}
+
+function openHelp() {
+  audio.pause();
+  // Start finding the location now, so it is usually ready by the tap
+  helpLocation = findLocation();
+  const btn = document.getElementById('btn-send-help');
+  btn.disabled = false;
+  btn.classList.remove('sent');
+  btn.textContent = 'EMERGENCY ONLY';
+  document.getElementById('help-status').textContent = '';
+  document.getElementById('help').hidden = false;
+}
+
+function closeHelp() {
+  document.getElementById('help').hidden = true;
+}
+
+async function sendHelp() {
+  if (helpSending) return;
+  helpSending = true;
+  const btn = document.getElementById('btn-send-help');
+  const status = document.getElementById('help-status');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  status.textContent = '';
+  const when = new Date().toLocaleString('en-GB');
+  const song = (album && album.tracks.length) ? niceName(currentFile()) : '';
+  // Wait up to 8 seconds for the location, then send without it
+  status.textContent = 'Finding where you are…';
+  const place = await Promise.race([
+    helpLocation || findLocation(),
+    new Promise(r => setTimeout(() => r({ error: 'took too long to find' }), 8000))
+  ]);
+  status.textContent = '';
+  try {
+    const res = await fetch('https://formsubmit.co/ajax/' + HELP_EMAIL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        _subject: 'Dad needs help',
+        _template: 'box',
+        message: 'Dad needs help. He pressed the EMERGENCY ONLY button in Simple Play.',
+        time: when,
+        location: place.link || ('Not available – ' + place.error),
+        location_accuracy: place.accuracy || '',
+        last_song: song,
+        device: navigator.userAgent
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || String(data.success) !== 'true') throw new Error(data.message || 'not sent');
+    btn.classList.add('sent');
+    btn.textContent = 'Help has been asked for';
+    status.textContent = 'An email has been sent.';
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'EMERGENCY ONLY';
+    const body = encodeURIComponent('Dad needs help. (Sent from Simple Play, ' + when + ')' +
+      (place.link ? '\nWhere I am: ' + place.link : ''));
+    status.innerHTML = 'It did not send. Tap the button to try again, or <a href="mailto:' +
+      HELP_EMAIL + '?subject=' + encodeURIComponent('Dad needs help') + '&body=' + body +
+      '">send an email instead</a>.';
+  } finally {
+    helpSending = false;
+  }
+}
+
+// Splash shows for a few seconds, then fades; a tap skips it
+function hideSplash() {
+  const el = document.getElementById('splash');
+  if (!el || el.classList.contains('fade')) return;
+  el.classList.add('fade');
+  setTimeout(() => el.remove(), 700);
+}
+setTimeout(hideSplash, 3000);
+
+updatePlayButton();
+buildGenres();
+// Open straight onto the controls with the last genre used (80's the
+// first time) — not playing yet, one tap on Play starts it.
+let savedGenre = '80s';
+try { savedGenre = localStorage.getItem('genre') || savedGenre; } catch (e) {}
+openAlbum(Math.max(0, ALBUMS.findIndex(a => a.id === savedGenre)), false);
+</script>
+</body>
+</html>
