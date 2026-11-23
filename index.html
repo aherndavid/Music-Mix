@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.11">
+<meta name="version" content="1.12">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1010,7 +1010,7 @@ audio.addEventListener('error', () => {
 // The levels come from a separate copy of the song, worked out ahead
 // and looked up by playing time. The player's own sound is never routed
 // through Web Audio, which could stop it when the phone locks.
-// Radio has no bars: a hungry record chases a ghost there instead.
+// Radio has no bars: an arcade-style ninja scene plays there instead.
 const EQ_BANDS = 16, EQ_FPS = 25, EQ_RATE = 22050, EQ_N = 1024;
 const eqCanvas = document.getElementById('eq');
 const eqNow = new Float32Array(EQ_BANDS);
@@ -1095,96 +1095,131 @@ function eqLevel(b) {
   return eqData[Math.floor(audio.currentTime * EQ_FPS) * EQ_BANDS + b] || 0;
 }
 
-// ── Radio chase ── each ghost eaten brings the next colour
-const GHOSTS = ['#ff8c00', '#3ddc5a', '#ff5cb8'];   // orange, green, pink
-const CHASE_SECS = 6, CAUGHT = 0.6;                 // length of a chase; when the ghost is eaten
+// ── Radio scene ── a ninja runs past Mount Fuji, throwing stars at
+// paper-lantern spirits; each one hit brings the next colour
+const LANTERNS = ['#ff8c00', '#3ddc5a', '#ff5cb8'];  // orange, green, pink
+const CHASE_SECS = 5, THROW = 0.5, HIT = 0.62;       // length of a round; when the star is thrown and lands
 let chaseT = 0, chaseLast = 0;
 
-function drawGhost(g, x, y, r, t, colour) {
-  g.save(); g.translate(x, y);
-  g.fillStyle = g.strokeStyle = colour;
-  // little waving arms, and a body trailing off to a wisp behind
-  g.lineWidth = r * 0.28; g.lineCap = 'round';
-  g.beginPath();
-  g.moveTo(r * 0.3, r * 0.2); g.lineTo(r * 1.05, r * (0.1 + 0.3 * Math.sin(t * 9)));
-  g.moveTo(-r * 0.3, r * 0.3); g.lineTo(-r * 0.95, r * (0.2 - 0.3 * Math.sin(t * 9)));
-  g.stroke();
-  const sway = r * 0.15 * Math.sin(t * 6);
-  g.beginPath();
-  g.moveTo(-r * 0.75, -r * 0.1);
-  g.bezierCurveTo(-r * 0.75, -r * 1.25, r * 0.75, -r * 1.25, r * 0.75, -r * 0.1);
-  g.bezierCurveTo(r * 0.75, r * 0.7, r * 0.1, r * 0.8, -r * 1.1 + sway, r * 1.15);
-  g.bezierCurveTo(-r * 0.4, r * 0.7, -r * 0.75, r * 0.5, -r * 0.75, -r * 0.1);
-  g.fill();
-  // looking back, mouth open
-  g.fillStyle = '#111';
-  g.beginPath(); g.ellipse(-r * 0.38, -r * 0.3, r * 0.1, r * 0.17, 0, 0, 7); g.fill();
-  g.beginPath(); g.ellipse(r * 0.08, -r * 0.3, r * 0.1, r * 0.17, 0, 0, 7); g.fill();
-  g.beginPath(); g.ellipse(-r * 0.15, r * 0.1, r * 0.13, r * 0.18, 0, 0, 7); g.fill();
-  g.restore();
+// Pictures made of letters: each letter is a colour, a dot is see-through
+const SPRITE_INK = { b: '#3f6bff', d: '#1c2f8f', s: '#ffcf9e', r: '#e53935', w: '#ffffff', k: '#111111', y: '#ffd400' };
+const NINJA_TOP = [
+  '.....bbbbbb.....',
+  '....bbbbbbbb....',
+  '...bbbbbbbbbb...',
+  '...rrrrrrrrrr...',
+  '...bbsssssss....',
+  '...bbsskssks....',
+  '...bbbbbbbbb....',
+  '....bbbbbbb.....',
+  '...bbbbbbbbb....',
+  '..bbbddbbbdbb...',
+  '..bb.bbbbb.bbs..',
+  '..ss.rrrrr......',
+  '.....bbbbb......'];
+const NINJA_LEGS = [
+  ['....bbb.bbb.....', '..bbbb...bbb....', '..dd......ddd...'],
+  ['.....bbbbb......', '.....bbbbb......', '.....ddddd......'],
+  ['....bbb.bbb.....', '...bbb...bbbb...', '..ddd......dd...'],
+  ['.....bbbbb......', '.....bbbbb......', '.....ddddd......']];
+const NINJA_JUMP = ['....bbbbbbbb....', '...bbb...bbdd...', '....dd..........'];
+const LANTERN = [
+  '....kkkkk....',
+  '...ccccccc...',
+  '..ccccccccc..',
+  '.ckckckckckc.',
+  '.cccwwcwwccc.',
+  '.cccwkcwkccc.',
+  '.cccwwcwwccc.',
+  '.ckckckckckc.',
+  '.ccccccccccc.',
+  '..kkkkkkkkk..',
+  '..ccccrrccc..',
+  '...cccrrcc...',
+  '....kkrrk....',
+  '......rr.....'];
+const STAR = [['.w.w.', 'wwwww', '.wkw.', 'wwwww', '.w.w.'], ['..w..', '.www.', 'wwkww', '.www.', '..w..']];
+const DIGITS = ['111101101101111', '010110010010111', '111001111100111', '111001111001111', '101101111001001', '111100111001111', '111100111101111', '111001001001001', '111101111101111', '111101111001111'];   // 3 x 5 dots each
+
+function sprite(g, rows, x, y, colour) {
+  x = Math.round(x); y = Math.round(y);
+  rows.forEach((row, j) => {
+    for (let i = 0; i < row.length; i++) {
+      if (row[i] === '.') continue;
+      g.fillStyle = row[i] === 'c' ? colour : SPRITE_INK[row[i]];
+      g.fillRect(x + i, y + j, 1, 1);
+    }
+  });
 }
 
-function drawRecord(g, x, y, r, t, mouth, label) {
-  g.save(); g.translate(x, y);
-  // running legs and red shoes
-  const step = Math.floor(t * 8) % 2 ? 1 : -1;
-  for (const side of [-1, 1]) {
-    const fx = r * 0.35 * side, lift = side === step ? r * 0.15 : 0;
-    g.fillStyle = '#fff'; g.fillRect(fx - r * 0.09, r * 0.85, r * 0.18, r * 0.5 - lift);
-    g.fillStyle = '#e53935'; g.fillRect(fx - r * 0.15, r * 1.3 - lift, r * 0.5, r * 0.22);
-  }
-  const pie = rad => { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, rad, mouth, 2 * Math.PI - mouth); g.closePath(); };
-  g.fillStyle = '#ffd400'; pie(r); g.fill();
-  g.strokeStyle = '#b36b00'; g.lineWidth = r * 0.09;              // vinyl grooves
-  for (const k of [0.82, 0.6]) { g.beginPath(); g.arc(0, 0, r * k, mouth + 0.1, 2 * Math.PI - mouth - 0.1); g.stroke(); }
-  g.fillStyle = label; pie(r * 0.42); g.fill();
-  g.fillStyle = '#111'; g.fillRect(-r * 0.2, -r * 0.08, r * 0.14, r * 0.14);   // the hole
-  // headphones and an eye
-  g.strokeStyle = '#e53935'; g.lineWidth = r * 0.17;
-  g.beginPath(); g.arc(0, 0, r * 1.1, Math.PI * 1.02, Math.PI * 1.75); g.stroke();
-  g.fillStyle = '#e53935'; g.fillRect(-r * 1.28, -r * 0.2, r * 0.36, r * 0.6);
-  g.fillStyle = '#fff'; g.fillRect(r * 0.02, -r * 0.78, r * 0.36, r * 0.36);
-  g.fillStyle = '#111'; g.fillRect(r * 0.2, -r * 0.7, r * 0.18, r * 0.24);
-  g.restore();
-}
-
-function drawNote(g, x, y, r) {
-  g.fillStyle = '#4fc3ff';
-  g.fillRect(x, y - r * 0.4, r * 0.12, r * 0.6);
-  g.fillRect(x, y - r * 0.4, r * 0.34, r * 0.18);
-  g.fillRect(x - r * 0.26, y + r * 0.1, r * 0.38, r * 0.26);
-}
-
-// Draws one frame of the chase on a w x h picture
+// Draws one frame on a w x h picture
 function chaseScene(g, w, h) {
   const n = Math.floor(chaseT / CHASE_SECS), p = chaseT / CHASE_SECS - n, t = chaseT;
-  const r = Math.min(h * 0.2, w * 0.14), y = h / 2;
-  const colour = GHOSTS[n % GHOSTS.length];
-  const x = -7 * r + p * (w + 10 * r);
-  const since = (p - CAUGHT) * CHASE_SECS;                        // seconds since it was eaten
-  g.save();
-  if (n % 2) { g.translate(w, 0); g.scale(-1, 1); }               // every other chase runs right to left
-  for (let k = 0; k < 6; k++) {                                   // notes vanish as the record reaches them
-    const nx = w * (k + 0.5) / 6;
-    if (nx > x + r * 0.6) drawNote(g, nx, y, r);
+  const ground = h - 8, colour = LANTERNS[n % LANTERNS.length];
+  g.fillStyle = '#1b1247'; g.fillRect(0, 0, w, h);                    // night sky
+  g.fillStyle = '#ffffff';
+  for (let k = 0; k < 14; k++) if ((k + Math.floor(t * 2)) % 5) g.fillRect((k * 37) % w, (k * 23) % Math.max(1, ground - 14), 1, 1);
+  // red sun, with Mount Fuji in front
+  const cx = Math.round(w * 0.62), top = Math.round(ground - Math.min(h * 0.5, w * 0.42)), tall = ground - top;
+  g.fillStyle = '#e53935'; g.beginPath(); g.arc(cx - tall * 0.35, top + tall * 0.1, tall * 0.42, 0, 7); g.fill();
+  for (let y = 0; y < tall; y++) {
+    const half = Math.round(3 + y * 0.95 + y * y / tall * 0.15);
+    g.fillStyle = y < tall * 0.28 + (y % 2 ? 1 : 0) ? '#ffffff' : '#4a3a9c';
+    g.fillRect(cx - half, top + y, half * 2, 1);
   }
-  if (since < 0) drawGhost(g, x + r * 1.2 + 3.5 * r * (1 - p / CAUGHT), y + r * 0.15 * Math.sin(t * 7), r * 0.85, t, colour);
-  const mouth = since >= 0 && since < 0.5 ? 0.05 : [0.1, 0.4, 0.65, 0.4][Math.floor(t * 12) % 4];
-  drawRecord(g, x, y, r, t, mouth, since >= 0 ? colour : '#fff'); // label takes the ghost's colour
-  if (since >= 0 && since < 0.7) {
+  g.fillStyle = '#4a3a9c';                                            // jagged edge to the snow
+  for (let k = -2; k <= 2; k++) g.fillRect(cx + k * 4, top + Math.round(tall * 0.28) - 3 - (k & 1), 2, 5);
+  // torii gates going by
+  const gap = Math.max(70, w * 0.8);
+  for (let k = 0; k < Math.ceil(w / gap) + 2; k++) {
+    const x = Math.round(k * gap - (t * 18) % gap) - 26;
+    g.fillStyle = '#e53935';
+    g.fillRect(x + 4, ground - 24, 3, 24); g.fillRect(x + 19, ground - 24, 3, 24); g.fillRect(x + 2, ground - 19, 22, 2);
+    g.fillRect(x - 1, ground - 26, 28, 3); g.fillStyle = '#111111'; g.fillRect(x - 2, ground - 28, 30, 2);
+  }
+  // ground rushing past
+  g.fillStyle = '#3ddc5a'; g.fillRect(0, ground, w, 2);
+  g.fillStyle = '#111111'; g.fillRect(0, ground + 2, w, h);
+  g.fillStyle = '#4a3a9c';
+  for (let x = -((Math.floor(t * 36)) % 12); x < w; x += 12) g.fillRect(x, ground + 4, 5, 2);
+
+  // ninja: jumps as the star is thrown
+  const air = Math.max(0, Math.min(1, (p - THROW + 0.08) / 0.22));
+  const jump = Math.sin(air * Math.PI) * Math.min(18, h * 0.22);
+  const nx = Math.round(w * 0.1), ny = Math.round(ground - 16 - jump);
+  g.fillStyle = '#e53935';                                            // scarf
+  for (let k = 0; k < 9; k++) g.fillRect(nx + 3 - k, Math.round(ny + 7 + Math.sin(t * 12 - k * 0.8) * (k / 5)), 1, 2);
+  sprite(g, NINJA_TOP, nx, ny);
+  sprite(g, jump > 1 ? NINJA_JUMP : NINJA_LEGS[Math.floor(t * 12) % 4], nx, ny + 13);
+
+  // lantern spirit drifting in
+  const at = q => w + 4 - (w * 0.42 + 4) * Math.min(1, q / HIT);
+  const ly = ground - 34 + 4 * Math.sin(t * 4);
+  if (p < HIT) sprite(g, LANTERN, at(p), ly, colour);
+  if (p > THROW && p < HIT) {
+    const q = (p - THROW) / (HIT - THROW), sx = nx + 14 + (at(HIT) - nx - 12) * q, sy = ny + 8 + (ly + 5 - ny - 8) * q;
+    sprite(g, STAR[Math.floor(t * 20) % 2], sx, sy);
+  }
+  const since = (p - HIT) * CHASE_SECS;                               // seconds since it was hit
+  if (since >= 0 && since < 0.8) {
     g.fillStyle = colour;
-    for (let k = 0; k < 8; k++) {
-      const a = k * Math.PI / 4, d = r * (0.6 + since * 2.4), z = r * 0.26 * (1 - since / 0.8);
-      g.fillRect(x + r + Math.cos(a) * d - z / 2, y + Math.sin(a) * d - z / 2, z, z);
+    for (let k = 0; k < 10; k++) {
+      const a = k * Math.PI / 5, d = 3 + since * 26, z = since < 0.4 ? 3 : 2;
+      g.fillRect(Math.round(at(HIT) + 6 + Math.cos(a) * d), Math.round(ly + 6 + Math.sin(a) * d), z, z);
     }
   }
-  g.restore();
+  // score, 100 for each lantern
+  const score = String(((n + (since >= 0 ? 1 : 0)) * 100) % 100000).padStart(5, '0');
+  g.fillStyle = '#ffd400';
+  [...score].forEach((ch, k) => {
+    for (let b = 0; b < 15; b++) if (DIGITS[ch][b] === '1') g.fillRect(3 + k * 4 + b % 3, 3 + Math.floor(b / 3), 1, 1);
+  });
 }
 
 // Arcade look: draw it tiny, snap every dot to a few flat colours,
 // then blow it up with hard square edges.
 const CHASE_PIXEL = 4;                                            // size of one big pixel on screen
-const CHASE_COLOURS = [...GHOSTS, '#ffd400', '#b36b00', '#e53935', '#ffffff', '#111111', '#4fc3ff']
+const CHASE_COLOURS = [...LANTERNS, ...Object.values(SPRITE_INK), '#1b1247', '#4a3a9c']
   .map(c => [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16)));
 const chaseCanvas = document.createElement('canvas');
 let chaseDrawn = '';
