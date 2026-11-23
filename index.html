@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.5">
+<meta name="version" content="1.6">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -212,6 +212,11 @@
   }
   #version { display: none; }   /* the version shows on the splash screen */
   #btn-close { margin: 0 auto; background: #c62828; border-color: #ef5350; color: #fff; -webkit-text-stroke: 0; font-size: clamp(20px, 5vw, 30px); letter-spacing: 0.08em; width: 100%; }
+  /* ── Club Classics: yellow text and outlines (CLOSE stays as it is) ── */
+  #player.club, #player.club .now-text > div, #player.club .now .art-msg, #player.club .msg { color: #ffd400; }
+  #player.club button { color: #ffd400; border-color: #ffd400; }
+  #player.club .genres button[aria-pressed="true"] { background: #ffd400; color: #111; }
+  #player.club .rate button.on { border-color: #fff; }   /* pressed thumb keeps its white edge */
   .help {
     position: fixed; inset: 0; z-index: 90;
     background: #111;
@@ -782,6 +787,7 @@ function buildStations() {
 function openAlbum(i, autoplay = true) {
   album = ALBUMS[i];
   try { localStorage.setItem('genre', album.id); } catch (e) {}
+  document.getElementById('player').classList.toggle('club', album.id === 'club');
   [...document.getElementById('genres').children].forEach((b, n) =>
     b.setAttribute('aria-pressed', n === i ? 'true' : 'false'));
   buildStations();
