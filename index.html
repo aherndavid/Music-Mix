@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.8">
+<meta name="version" content="1.9">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -940,6 +940,7 @@ function setRadioMode(key) {
   }
   document.querySelector('.rate').style.visibility = radio ? 'hidden' : '';
   updateRadioOn();
+  eqStart();
 }
 
 function toggleRadio(key) {
@@ -1009,7 +1010,7 @@ audio.addEventListener('error', () => {
 // The levels come from a separate copy of the song, worked out ahead
 // and looked up by playing time. The player's own sound is never routed
 // through Web Audio, which could stop it when the phone locks.
-// Radio can't be read this way, so its bars are just for show.
+// Radio has no bars: a hungry record chases a ghost there instead.
 const EQ_BANDS = 16, EQ_FPS = 25, EQ_RATE = 22050, EQ_N = 1024;
 const eqCanvas = document.getElementById('eq');
 const eqNow = new Float32Array(EQ_BANDS);
@@ -1089,13 +1090,79 @@ async function eqLoad() {
 }
 
 function eqLevel(b) {
-  if (audio.paused) return 0;
-  if (radio) {
-    const t = performance.now() / 1000;
-    return 0.45 + 0.25 * Math.sin(t * (3 + b * 0.37) + b * 1.7) + 0.2 * Math.sin(t * 7.3 + b * 2.9);
-  }
+  if (audio.paused || radio) return 0;
   if (!eqData || eqUrl !== audio.src) return 0;
   return eqData[Math.floor(audio.currentTime * EQ_FPS) * EQ_BANDS + b] || 0;
+}
+
+// ── Radio chase ── each ghost eaten brings the next colour
+const GHOSTS = ['#ff8c00', '#3ddc5a', '#ff5cb8'];   // orange, green, pink
+const CHASE_SECS = 6, CAUGHT = 0.6;                 // length of a chase; when the ghost is eaten
+let chaseT = 0, chaseLast = 0;
+
+function drawGhost(g, x, y, r, t, colour) {
+  g.save(); g.translate(x, y);
+  g.fillStyle = g.strokeStyle = colour;
+  // little waving arms, and a body trailing off to a wisp behind
+  g.lineWidth = r * 0.28; g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(r * 0.3, r * 0.2); g.lineTo(r * 1.05, r * (0.1 + 0.3 * Math.sin(t * 9)));
+  g.moveTo(-r * 0.3, r * 0.3); g.lineTo(-r * 0.95, r * (0.2 - 0.3 * Math.sin(t * 9)));
+  g.stroke();
+  const sway = r * 0.15 * Math.sin(t * 6);
+  g.beginPath();
+  g.moveTo(-r * 0.75, -r * 0.1);
+  g.bezierCurveTo(-r * 0.75, -r * 1.25, r * 0.75, -r * 1.25, r * 0.75, -r * 0.1);
+  g.bezierCurveTo(r * 0.75, r * 0.7, r * 0.1, r * 0.8, -r * 1.1 + sway, r * 1.15);
+  g.bezierCurveTo(-r * 0.4, r * 0.7, -r * 0.75, r * 0.5, -r * 0.75, -r * 0.1);
+  g.fill();
+  // looking back, mouth open
+  g.fillStyle = '#111';
+  g.beginPath(); g.ellipse(-r * 0.38, -r * 0.3, r * 0.1, r * 0.17, 0, 0, 7); g.fill();
+  g.beginPath(); g.ellipse(r * 0.08, -r * 0.3, r * 0.1, r * 0.17, 0, 0, 7); g.fill();
+  g.beginPath(); g.ellipse(-r * 0.15, r * 0.1, r * 0.13, r * 0.18, 0, 0, 7); g.fill();
+  g.restore();
+}
+
+function drawRecord(g, x, y, r, t, mouth, label) {
+  g.save(); g.translate(x, y); g.rotate(0.08 * Math.sin(t * 8));
+  const pie = rad => { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, rad, mouth, 2 * Math.PI - mouth); g.closePath(); };
+  g.fillStyle = '#000'; pie(r); g.fill();
+  g.strokeStyle = '#8a8a8a'; g.lineWidth = r * 0.05; pie(r); g.stroke();
+  g.strokeStyle = '#3c3c3c'; g.lineWidth = r * 0.03;
+  for (const k of [0.85, 0.7, 0.55]) { g.beginPath(); g.arc(0, 0, r * k, mouth, 2 * Math.PI - mouth); g.stroke(); }
+  g.fillStyle = label; pie(r * 0.4); g.fill();
+  // headphones and an eye
+  g.strokeStyle = '#e53935'; g.lineWidth = r * 0.13; g.lineCap = 'round';
+  g.beginPath(); g.arc(0, 0, r * 1.1, Math.PI * 1.02, Math.PI * 1.75); g.stroke();
+  g.fillStyle = '#e53935'; g.beginPath(); g.ellipse(-r * 1.08, r * 0.08, r * 0.17, r * 0.32, 0, 0, 7); g.fill();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(r * 0.2, -r * 0.58, r * 0.18, 0, 7); g.fill();
+  g.fillStyle = '#111'; g.beginPath(); g.arc(r * 0.27, -r * 0.58, r * 0.09, 0, 7); g.fill();
+  g.restore();
+}
+
+function drawChase(g, w, h) {
+  const now = performance.now() / 1000;
+  if (!audio.paused) chaseT += Math.min(0.05, now - chaseLast);   // waits while paused
+  chaseLast = now;
+  const n = Math.floor(chaseT / CHASE_SECS), p = chaseT / CHASE_SECS - n, t = chaseT;
+  const r = Math.min(h * 0.24, w * 0.12), y = h / 2 + h * 0.12 * Math.sin(t * 2.2);
+  const colour = GHOSTS[n % GHOSTS.length];
+  const x = -7 * r + p * (w + 10 * r);
+  const since = (p - CAUGHT) * CHASE_SECS;                        // seconds since it was eaten
+  g.save();
+  if (n % 2) { g.translate(w, 0); g.scale(-1, 1); }               // every other chase runs right to left
+  if (since < 0) drawGhost(g, x + r * 1.2 + 3.5 * r * (1 - p / CAUGHT), y + r * 0.15 * Math.sin(t * 7), r * 0.85, t, colour);
+  const mouth = since >= 0 && since < 0.5 ? 0.03 : 0.08 + 0.55 * Math.abs(Math.sin(t * 6));
+  drawRecord(g, x, y, r, t, mouth, since >= 0 ? colour : '#fff'); // label takes the ghost's colour
+  if (since >= 0 && since < 0.7) {
+    g.fillStyle = colour; g.globalAlpha = 1 - since / 0.7;
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4, d = r * (0.5 + since * 2);
+      g.beginPath(); g.arc(x + r + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.1, 0, 7); g.fill();
+    }
+  }
+  g.restore();
 }
 
 function eqDraw() {
@@ -1105,6 +1172,13 @@ function eqDraw() {
   if (eqCanvas.height !== h) eqCanvas.height = h;
   const g = eqCanvas.getContext('2d');
   g.clearRect(0, 0, w, h);
+  if (radio) {
+    eqNow.fill(0);
+    drawChase(g, w, h);
+    eqRunning = !document.hidden && !audio.paused;
+    if (eqRunning) requestAnimationFrame(eqDraw);
+    return;
+  }
   g.fillStyle = album && album.id === 'club' ? '#ffd400' : '#ff8c00';
   const gap = 4 * dpr, bw = (w - gap * (EQ_BANDS - 1)) / EQ_BANDS;
   let moving = false;
