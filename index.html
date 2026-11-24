@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.12">
+<meta name="version" content="1.13">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -53,7 +53,7 @@
   button:focus-visible { outline: 6px solid #fff; outline-offset: 4px; }
 
   /* ── Genre buttons ── */
-  .genres { display: grid; grid-template-columns: 1fr 1fr 2.6fr; gap: 8px; margin-bottom: 12px; }
+  .genres { display: grid; grid-template-columns: 1.5fr 1fr; gap: 8px; margin-bottom: 12px; }
   .genres button {
     background: #000; color: #ff8c00; border-color: #ff8c00; min-width: 0; padding: 7px 2px;
     font-size: clamp(17px, 4.6vw, 28px); font-weight: 900; border-radius: 14px;
@@ -205,17 +205,13 @@
     font-size: clamp(22px, 5.5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
     padding: 8px 12px; margin-bottom: 14px;
   }
-  .radio-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .radio-row { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
   .btn-radio {
     flex: 1 1 0; min-width: 0; background: #4a4a4a; color: #f2f2f2; border-color: #6e6e6e;
     font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
     padding: 8px 6px; height: clamp(64px, 17vw, 90px);
   }
   #btn-moonmission { background: #0d47a1; border-color: #5c8fe0; }
-  #btn-c895       { background: #6a1b9a; border-color: #ba68c8; }
-  #btn-heart70s   { background: #b34700; border-color: #ff8a50; }
-  #btn-heart80s   { background: #d6004f; border-color: #ff5c93; }
-  #btn-gold       { background: #8a6508; border-color: #e0b84a; }
   #btn-close {
     display: block; width: 100%; color: #fff;
     font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
@@ -223,10 +219,10 @@
   }
   #version { display: none; }   /* the version shows on the splash screen */
   #btn-close { margin: 0 auto; background: #c62828; border-color: #ef5350; color: #fff; -webkit-text-stroke: 0; font-size: clamp(20px, 5vw, 30px); letter-spacing: 0.08em; width: 100%; }
-  /* ── Club Classics: yellow text and yellow buttons (CLOSE stays as it is) ── */
+  /* ── Yellow text and yellow buttons (CLOSE stays as it is) ── */
   #player.club, #player.club .now-text > div, #player.club .now .art-msg, #player.club .msg { color: #ffd400; }
   #player.club button { background: #ffd400; color: #111; border-color: #ffd400; }
-  /* The genre that's on, and a pressed thumb: the other way round */
+  /* THE COLLECTION while it's on, and a pressed thumb: the other way round */
   #player.club .genres button[aria-pressed="true"],
   #player.club .rate button.on { background: #000; color: #ffd400; }
   #player.club #btn-play.playing { animation-name: play-flash-club; }
@@ -234,6 +230,28 @@
     0%, 100% { background: #ffd400; box-shadow: 0 0 0 0 rgba(255, 212, 0, 0); }
     50%      { background: #ffe873; box-shadow: 0 0 22px 6px rgba(255, 212, 0, 0.6); }
   }
+  /* ── Arcade game ── */
+  .arcade {
+    position: fixed; inset: 0; z-index: 95; background: #111; color: #ffd400;
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+    padding: calc(36px + env(safe-area-inset-top)) 16px calc(10px + env(safe-area-inset-bottom));
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .arcade[hidden] { display: none; }
+  .arcade-hud { display: flex; justify-content: space-between; gap: 10px; width: 100%; max-width: 560px; font: bold clamp(14px, 4vw, 20px) "Courier New", monospace; white-space: pre; }
+  #arcade-stage { position: relative; flex: 1 1 0; min-height: 0; width: 100%; max-width: 700px; }
+  #arcade-canvas { width: 100%; height: 100%; object-fit: contain; display: block; image-rendering: pixelated; }
+  #arcade-msg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    white-space: pre-line; text-align: center; background: rgba(0, 0, 0, 0.72); pointer-events: none;
+    font: bold clamp(18px, 5.4vw, 28px)/1.35 "Courier New", monospace;
+  }
+  #arcade-msg[hidden] { display: none; }
+  .arcade-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; max-width: 330px; flex: none; }
+  .arcade-pad button { padding: 0; height: clamp(46px, 7vh, 62px); background: #ffd400; border-color: #ffd400; color: #111; font-size: clamp(20px, 5.5vw, 26px); touch-action: none; }
+  .arcade-pad [data-dir="up"], .arcade-pad [data-dir="down"] { grid-column: 2; }
+  #arcade-throw { background: #e53935; border-color: #e53935; color: #fff; }
+  #btn-arcade-close { flex: none; max-width: 820px; background: #c4c4c4; border-color: #a8a8a8; padding: 8px 12px; font-size: clamp(20px, 5vw, 28px); font-weight: 900; }
   .help {
     position: fixed; inset: 0; z-index: 90;
     background: #111;
@@ -273,8 +291,8 @@
   <button id="btn-help" onclick="openHelp()">EMERGENCY ONLY</button>
 
   <div id="player" hidden>
-    <!-- Genre buttons, filled in from ALBUMS -->
-    <div class="genres" id="genres" role="group" aria-label="Genre"></div>
+    <!-- THE COLLECTION (from ALBUMS) and ARCADE -->
+    <div class="genres" id="genres" role="group" aria-label="Music or arcade"></div>
     <div class="now">
       <div class="art"><img id="cover" alt="" hidden><div class="art-msg" id="art-msg" hidden>search for album art</div></div>
       <div class="now-text">
@@ -306,7 +324,7 @@
       </button>
     </div>
 
-    <!-- The genre's two radio stations, filled in from ALBUMS -->
+    <!-- The radio station, filled in from ALBUMS -->
     <div class="radio-row" id="radio-row" role="group" aria-label="Radio stations"></div>
 
     <div class="msg" id="msg"></div>
@@ -320,11 +338,25 @@
 
   <audio id="audio" preload="auto" playsinline></audio>
 </div>
+<!-- Arcade game (arcade.js), on top of the player so the music carries on -->
+<div class="arcade" id="arcade" hidden role="dialog" aria-modal="true" aria-label="Arcade game">
+  <div class="arcade-hud"><span id="arcade-score"></span><span id="arcade-best"></span><span id="arcade-lives"></span></div>
+  <div id="arcade-stage"><canvas id="arcade-canvas"></canvas><div id="arcade-msg"></div></div>
+  <div class="arcade-pad">
+    <button data-dir="up" aria-label="Up">▲</button>
+    <button data-dir="left" aria-label="Left" style="grid-column:1">◀</button>
+    <button id="arcade-throw" aria-label="Throw star">★</button>
+    <button data-dir="right" aria-label="Right">▶</button>
+    <button data-dir="down" aria-label="Down">▼</button>
+  </div>
+  <button id="btn-arcade-close" onclick="closeArcade()">BACK TO MUSIC</button>
+</div>
+<script src="arcade.js?v=1"></script>
 <script>
 /* ─────────────────────────────────────────────────────────────
-   GENRES — one entry per genre button, songs all in /songs.
+   THE COLLECTION — songs all in /songs.
 
-   "stations" are the radio stations offered with that genre.
+   "stations" are the radio stations offered with it.
    "tracks" is the list of MP3 file names, in play order.
    Album art: the sleeve of the original album (or single) the song
    first came out on, from assets/covers — named in "info" below.
@@ -335,192 +367,7 @@
    ───────────────────────────────────────────────────────────── */
 const ALBUMS = [
   {
-    id: "70s", title: "70's", folder: "songs", stations: ["heart70s","gold"],
-    tracks: [
-      "Another Brick In The Wall (Part 2).mp3",
-      "Are Friends Electric.mp3",
-      "Baker Street.mp3",
-      "Bohemian Rhapsody.mp3",
-      "Cars (Premier Mix).mp3",
-      "Copacabana (At the Copa).mp3",
-      "Dancing Queen(1).mp3",
-      "Dreams.mp3",
-      "Goodbye Yellow Brick Road.mp3",
-      "Hanging On The Telephone(1).mp3",
-      "Livin_ Thing.mp3",
-      "Mandy(1).mp3",
-      "Rock With You.mp3",
-      "Sir Duke.mp3",
-      "The Model.mp3"
-    ],
-    years: {
-      "Another Brick In The Wall (Part 2).mp3": 1979,
-      "Are Friends Electric.mp3": 1979,
-      "Baker Street.mp3": 1978,
-      "Bohemian Rhapsody.mp3": 1975,
-      "Cars (Premier Mix).mp3": 1979,
-      "Copacabana (At the Copa).mp3": 1978,
-      "Dancing Queen(1).mp3": 1976,
-      "Dreams.mp3": 1977,
-      "Goodbye Yellow Brick Road.mp3": 1973,
-      "Hanging On The Telephone(1).mp3": 1978,
-      "Livin_ Thing.mp3": 1976,
-      "Mandy(1).mp3": 1974,
-      "Rock With You.mp3": 1979,
-      "Sir Duke.mp3": 1976,
-      "The Model.mp3": 1978
-    },
-    // Artist, original album or single, its year, sleeve in assets/covers
-    info: {
-      "Another Brick In The Wall (Part 2).mp3": ["Pink Floyd","The Wall",1979,"pink-floyd-the-wall.jpg"],
-      "Are Friends Electric.mp3": ["Tubeway Army (Gary Numan)","Replicas",1979,"tubeway-army-replicas.jpg"],
-      "Baker Street.mp3": ["Gerry Rafferty","City to City",1978,"gerry-rafferty-city-to-city.jpg"],
-      "Bohemian Rhapsody.mp3": ["Queen","A Night at the Opera",1975,"queen-a-night-at-the-opera.jpg"],
-      "Cars (Premier Mix).mp3": ["Gary Numan","The Pleasure Principle",1979,"gary-numan-the-pleasure-principle.jpg"],
-      "Copacabana (At the Copa).mp3": ["Barry Manilow","Even Now",1978,"barry-manilow-even-now.jpg"],
-      "Dancing Queen(1).mp3": ["ABBA","Arrival",1976,"abba-arrival.jpg"],
-      "Dreams.mp3": ["Fleetwood Mac","Rumours",1977,"fleetwood-mac-rumours.jpg"],
-      "Goodbye Yellow Brick Road.mp3": ["Elton John","Goodbye Yellow Brick Road",1973,"elton-john-goodbye-yellow-brick-road.jpg"],
-      "Hanging On The Telephone(1).mp3": ["Blondie","Parallel Lines",1978,"blondie-parallel-lines.jpg"],
-      "Livin_ Thing.mp3": ["Electric Light Orchestra","A New World Record",1976,"electric-light-orchestra-a-new-world-record.jpg"],
-      "Mandy(1).mp3": ["Barry Manilow","Barry Manilow II",1974,"barry-manilow-barry-manilow-ii.jpg"],
-      "Rock With You.mp3": ["Michael Jackson","Off the Wall",1979,"michael-jackson-off-the-wall.jpg"],
-      "Sir Duke.mp3": ["Stevie Wonder","Songs in the Key of Life",1976,"stevie-wonder-songs-in-the-key-of-life.jpg"],
-      "The Model.mp3": ["Kraftwerk","The Man-Machine",1978,"kraftwerk-the-man-machine.jpg"]
-    }
-  },
-  {
-    id: "80s", title: "80's", folder: "songs", stations: ["heart80s","gold"],
-    tracks: [
-      "Bedsitter.mp3",
-      "Being Boiled.mp3",
-      "Bizarre Love Triangle.mp3",
-      "Blue Monday.mp3",
-      "Don_t Go.mp3",
-      "Don_t You Want Me.mp3",
-      "Electricity.mp3",
-      "Enola Gay.mp3",
-      "Everything Counts.mp3",
-      "Everything_s Gone Green.mp3",
-      "Fade to Grey.mp3",
-      "Girls On Film.mp3",
-      "Hungry Like The Wolf.mp3",
-      "Is There Something I Should Know.mp3",
-      "Just Can_t Get Enough.mp3",
-      "Let Me Go.mp3",
-      "Living On The Ceiling.mp3",
-      "Love Action (I Believe In Love).mp3",
-      "Mad World.mp3",
-      "Mirror Man.mp3",
-      "New Life.mp3",
-      "New Song.mp3",
-      "Only You.mp3",
-      "Rio (US Album Remix) (2009 Digital Remaster).mp3",
-      "See You.mp3",
-      "Sleepwalk.mp3",
-      "Souvenir.mp3",
-      "Space Age Love Song.mp3",
-      "Tainted Love.mp3",
-      "Telegraph.mp3",
-      "Temptation.mp3",
-      "The Perfect Kiss.mp3",
-      "The Reflex.mp3",
-      "The Wild Boys.mp3",
-      "Too Shy.mp3",
-      "Torch.mp3",
-      "Vienna.mp3",
-      "Visions Of China.mp3",
-      "West End Girls.mp3",
-      "Why.mp3"
-    ],
-    years: {
-      "Bedsitter.mp3": 1981,
-      "Being Boiled.mp3": 1980,
-      "Bizarre Love Triangle.mp3": 1986,
-      "Blue Monday.mp3": 1983,
-      "Don_t Go.mp3": 1982,
-      "Don_t You Want Me.mp3": 1981,
-      "Electricity.mp3": 1980,
-      "Enola Gay.mp3": 1980,
-      "Everything Counts.mp3": 1983,
-      "Everything_s Gone Green.mp3": 1981,
-      "Fade to Grey.mp3": 1980,
-      "Girls On Film.mp3": 1981,
-      "Hungry Like The Wolf.mp3": 1982,
-      "Is There Something I Should Know.mp3": 1983,
-      "Just Can_t Get Enough.mp3": 1981,
-      "Let Me Go.mp3": 1982,
-      "Living On The Ceiling.mp3": 1982,
-      "Love Action (I Believe In Love).mp3": 1981,
-      "Mad World.mp3": 1982,
-      "Mirror Man.mp3": 1982,
-      "New Life.mp3": 1981,
-      "New Song.mp3": 1983,
-      "Only You.mp3": 1982,
-      "Rio (US Album Remix) (2009 Digital Remaster).mp3": 1982,
-      "See You.mp3": 1982,
-      "Sleepwalk.mp3": 1980,
-      "Souvenir.mp3": 1981,
-      "Space Age Love Song.mp3": 1982,
-      "Tainted Love.mp3": 1981,
-      "Telegraph.mp3": 1983,
-      "Temptation.mp3": 1983,
-      "The Perfect Kiss.mp3": 1985,
-      "The Reflex.mp3": 1984,
-      "The Wild Boys.mp3": 1984,
-      "Too Shy.mp3": 1983,
-      "Torch.mp3": 1982,
-      "Vienna.mp3": 1980,
-      "Visions Of China.mp3": 1981,
-      "West End Girls.mp3": 1985,
-      "Why.mp3": 1984
-    },
-    // Artist, original album or single, its year, sleeve in assets/covers
-    info: {
-      "Bedsitter.mp3": ["Soft Cell","Non-Stop Erotic Cabaret",1981,"soft-cell-non-stop-erotic-cabaret.jpg"],
-      "Being Boiled.mp3": ["The Human League","Holiday '80",1980,"the-human-league-holiday-80.jpg"],
-      "Bizarre Love Triangle.mp3": ["New Order","Brotherhood",1986,"new-order-brotherhood.jpg"],
-      "Blue Monday.mp3": ["New Order","Blue Monday (single)",1983,"new-order-blue-monday.jpg"],
-      "Don_t Go.mp3": ["Yazoo","Upstairs at Eric's",1982,"yazoo-upstairs-at-eric-s.jpg"],
-      "Don_t You Want Me.mp3": ["The Human League","Dare",1981,"the-human-league-dare.jpg"],
-      "Electricity.mp3": ["Orchestral Manoeuvres in the Dark","Orchestral Manoeuvres in the Dark",1980,"orchestral-manoeuvres-in-the-dark-orchestral-manoeuvres-in-the-dark.jpg"],
-      "Enola Gay.mp3": ["Orchestral Manoeuvres in the Dark","Organisation",1980,"orchestral-manoeuvres-in-the-dark-organisation.jpg"],
-      "Everything Counts.mp3": ["Depeche Mode","Construction Time Again",1983,"depeche-mode-construction-time-again.jpg"],
-      "Everything_s Gone Green.mp3": ["New Order","Everything's Gone Green (single)",1981,"new-order-everything-s-gone-green.jpg"],
-      "Fade to Grey.mp3": ["Visage","Visage",1980,"visage-visage.jpg"],
-      "Girls On Film.mp3": ["Duran Duran","Duran Duran",1981,"duran-duran-duran-duran.jpg"],
-      "Hungry Like The Wolf.mp3": ["Duran Duran","Rio",1982,"duran-duran-rio.jpg"],
-      "Is There Something I Should Know.mp3": ["Duran Duran","Is There Something I Should Know? (single)",1983,"duran-duran-is-there-something-i-should-know.jpg"],
-      "Just Can_t Get Enough.mp3": ["Depeche Mode","Speak & Spell",1981,"depeche-mode-speak-spell.jpg"],
-      "Let Me Go.mp3": ["Heaven 17","The Luxury Gap",1983,"heaven-17-the-luxury-gap.jpg"],
-      "Living On The Ceiling.mp3": ["Blancmange","Happy Families",1982,"blancmange-happy-families.jpg"],
-      "Love Action (I Believe In Love).mp3": ["The Human League","Dare",1981,"the-human-league-dare.jpg"],
-      "Mad World.mp3": ["Tears for Fears","The Hurting",1983,"tears-for-fears-the-hurting.jpg"],
-      "Mirror Man.mp3": ["The Human League","Mirror Man (single)",1982,"the-human-league-mirror-man.jpg"],
-      "New Life.mp3": ["Depeche Mode","Speak & Spell",1981,"depeche-mode-speak-spell.jpg"],
-      "New Song.mp3": ["Howard Jones","New Song (single)",1983,"howard-jones-new-song.jpg"],
-      "Only You.mp3": ["Yazoo","Upstairs at Eric's",1982,"yazoo-upstairs-at-eric-s.jpg"],
-      "Rio (US Album Remix) (2009 Digital Remaster).mp3": ["Duran Duran","Rio",1982,"duran-duran-rio.jpg"],
-      "See You.mp3": ["Depeche Mode","A Broken Frame",1982,"depeche-mode-a-broken-frame.jpg"],
-      "Sleepwalk.mp3": ["Ultravox","Vienna",1980,"ultravox-vienna.jpg"],
-      "Souvenir.mp3": ["Orchestral Manoeuvres in the Dark","Architecture & Morality",1981,"orchestral-manoeuvres-in-the-dark-architecture-morality.jpg"],
-      "Space Age Love Song.mp3": ["A Flock of Seagulls","A Flock of Seagulls",1982,"a-flock-of-seagulls-a-flock-of-seagulls.jpg"],
-      "Tainted Love.mp3": ["Soft Cell","Non-Stop Erotic Cabaret",1981,"soft-cell-non-stop-erotic-cabaret.jpg"],
-      "Telegraph.mp3": ["Orchestral Manoeuvres in the Dark","Dazzle Ships",1983,"orchestral-manoeuvres-in-the-dark-dazzle-ships.jpg"],
-      "Temptation.mp3": ["Heaven 17","The Luxury Gap",1983,"heaven-17-the-luxury-gap.jpg"],
-      "The Perfect Kiss.mp3": ["New Order","Low-Life",1985,"new-order-low-life.jpg"],
-      "The Reflex.mp3": ["Duran Duran","Seven and the Ragged Tiger",1983,"duran-duran-seven-and-the-ragged-tiger.jpg"],
-      "The Wild Boys.mp3": ["Duran Duran","Arena",1984,"duran-duran-arena.jpg"],
-      "Too Shy.mp3": ["Kajagoogoo","White Feathers",1983,"kajagoogoo-white-feathers.jpg"],
-      "Torch.mp3": ["Soft Cell","Torch (single)",1982,null],
-      "Vienna.mp3": ["Ultravox","Vienna",1980,"ultravox-vienna.jpg"],
-      "Visions Of China.mp3": ["Japan","Tin Drum",1981,"japan-tin-drum.jpg"],
-      "West End Girls.mp3": ["Pet Shop Boys","Please",1986,"pet-shop-boys-please.jpg"],
-      "Why.mp3": ["Bronski Beat","The Age of Consent",1984,"bronski-beat-the-age-of-consent.jpg"]
-    }
-  },
-  {
-    id: "club", title: "Club Classics", folder: "songs", stations: ["moonmission","c895"],
+    id: "club", title: "The Collection", folder: "songs", stations: ["moonmission"],
     tracks: [
       "(I Wanna Give You) Devotion.mp3",
       "1998 (Paul van Dyk Mix).mp3",
@@ -780,16 +627,21 @@ function buildGenres() {
     btn.onclick = () => pickGenre(i);
     row.appendChild(btn);
   });
+  const game = document.createElement('button');
+  game.textContent = 'ARCADE';
+  game.onclick = () => openArcade();
+  row.appendChild(game);
 }
 
-// Tapping a genre plays it. Tapping the one already on does nothing,
-// unless the radio is playing: then it goes back to the songs.
+// THE COLLECTION: comes back from the radio, or starts the music.
+// Does nothing while a song is already playing.
 function pickGenre(i) {
-  if (album !== ALBUMS[i]) { openAlbum(i); return; }
-  if (radio) loadTrack(trackIndex, true);
+  if (album !== ALBUMS[i]) openAlbum(i);
+  else if (radio) loadTrack(trackIndex, true);
+  else if (audio.paused) play();
 }
 
-// The genre's own two radio stations
+// The radio station buttons
 function buildStations() {
   const row = document.getElementById('radio-row');
   row.innerHTML = '';
@@ -805,11 +657,8 @@ function buildStations() {
 
 function openAlbum(i, autoplay = true) {
   album = ALBUMS[i];
-  try { localStorage.setItem('genre', album.id); } catch (e) {}
   document.getElementById('player').classList.toggle('club', album.id === 'club');
-  setTimeout(eqStart);   // bars take the genre's colour
-  [...document.getElementById('genres').children].forEach((b, n) =>
-    b.setAttribute('aria-pressed', n === i ? 'true' : 'false'));
+  setTimeout(eqStart);
   buildStations();
   order = shuffledOrder();   // a different song first each time
   // Never open on the song that was on last time (or a liked song
@@ -925,11 +774,7 @@ function updateMediaSession(artSrc) {
 // never play at once. Tapping the playing station's button again (or
 // a skip button) goes back to the songs.
 const STATIONS = {
-  moonmission: { name: 'Moon Mission Tokyo (Japan)', label: 'JAPAN DANCE TOKYO', url: 'https://uk5.internet-radio.com/proxy/mmr?mp=/stream;', art: 'assets/moonmission.svg?v=2' },
-  c895: { name: 'Dance 89.5 (USA)', label: 'USA DANCE 89.5', url: 'https://knhc-ice.streamguys1.com/live', art: 'assets/c895.svg' },
-  heart70s: { name: 'Heart 70s', label: 'HEART 70s', url: 'https://media-ssl.musicradio.com/Heart70sMP3', art: 'assets/heart70s.svg' },
-  heart80s: { name: 'Heart 80s', label: 'HEART 80s', url: 'https://media-ssl.musicradio.com/Heart80sMP3', art: 'assets/heart80s.svg' },
-  gold: { name: 'Gold Radio', label: 'GOLD RADIO', url: 'https://media-ssl.musicradio.com/GoldMP3', art: 'assets/gold.svg' }
+  moonmission: { name: 'Moon Mission Tokyo (Japan)', label: 'JAPAN DANCE TOKYO', url: 'https://uk5.internet-radio.com/proxy/mmr?mp=/stream;', art: 'assets/moonmission.svg?v=2' }
 };
 let radio = null;                              // key of the station playing, or null for music
 
@@ -984,6 +829,7 @@ function prevTrack() {
 
 
 function updateRadioOn() {
+  if (album) document.getElementById('genres').children[ALBUMS.indexOf(album)].setAttribute('aria-pressed', radio ? 'false' : 'true');
   document.getElementById('player').classList.toggle('radio-on', !!radio && !audio.paused);
 }
 function updatePlayButton() {
@@ -1010,7 +856,8 @@ audio.addEventListener('error', () => {
 // The levels come from a separate copy of the song, worked out ahead
 // and looked up by playing time. The player's own sound is never routed
 // through Web Audio, which could stop it when the phone locks.
-// Radio has no bars: an arcade-style ninja scene plays there instead.
+// The bars show only while a song plays; otherwise (radio, or paused)
+// an arcade-style ninja scene fills the space.
 const EQ_BANDS = 16, EQ_FPS = 25, EQ_RATE = 22050, EQ_N = 1024;
 const eqCanvas = document.getElementById('eq');
 const eqNow = new Float32Array(EQ_BANDS);
@@ -1095,7 +942,7 @@ function eqLevel(b) {
   return eqData[Math.floor(audio.currentTime * EQ_FPS) * EQ_BANDS + b] || 0;
 }
 
-// ── Radio scene ── a ninja runs past Mount Fuji, throwing stars at
+// ── Ninja scene ── a ninja runs past Mount Fuji, throwing stars at
 // paper-lantern spirits; each one hit brings the next colour
 const LANTERNS = ['#ff8c00', '#3ddc5a', '#ff5cb8'];  // orange, green, pink
 const CHASE_SECS = 5, THROW = 0.5, HIT = 0.62;       // length of a round; when the star is thrown and lands
@@ -1225,10 +1072,11 @@ const chaseCanvas = document.createElement('canvas');
 let chaseDrawn = '';
 function drawChase(g, w, h) {
   const now = performance.now() / 1000;
-  if (!audio.paused) chaseT += Math.min(0.05, now - chaseLast);   // waits while paused
+  chaseT += Math.min(0.05, now - chaseLast);
   chaseLast = now;
   const dpr = w / (eqCanvas.clientWidth || w);
-  const sw = Math.max(1, Math.round(w / dpr / CHASE_PIXEL)), sh = Math.max(1, Math.round(h / dpr / CHASE_PIXEL));
+  const big = Math.max(1.5, Math.min(CHASE_PIXEL, h / dpr / 54));   // smaller dots in a short space
+  const sw = Math.max(1, Math.round(w / dpr / big)), sh = Math.max(1, Math.round(h / dpr / big));
   const frame = [Math.floor(chaseT * 24), sw, sh].join();         // 24 pictures a second is plenty
   if (frame !== chaseDrawn) {
     chaseDrawn = frame;
@@ -1258,24 +1106,22 @@ function eqDraw() {
   if (eqCanvas.height !== h) eqCanvas.height = h;
   const g = eqCanvas.getContext('2d');
   g.clearRect(0, 0, w, h);
-  if (radio) {
+  if (radio || audio.paused) {
     eqNow.fill(0);
     drawChase(g, w, h);
-    eqRunning = !document.hidden && !audio.paused;
+    eqRunning = !document.hidden && !arcadeOpen;
     if (eqRunning) requestAnimationFrame(eqDraw);
     return;
   }
-  g.fillStyle = album && album.id === 'club' ? '#ffd400' : '#ff8c00';
+  g.fillStyle = '#ffd400';
   const gap = 4 * dpr, bw = (w - gap * (EQ_BANDS - 1)) / EQ_BANDS;
-  let moving = false;
   for (let b = 0; b < EQ_BANDS; b++) {
     const v = eqLevel(b);
     eqNow[b] = v > eqNow[b] ? v : Math.max(v, eqNow[b] - 0.035);   // quick up, gentle fall
-    if (eqNow[b] > 0.001) moving = true;
     const bh = Math.max(3 * dpr, eqNow[b] * h);
     g.fillRect(b * (bw + gap), h - bh, bw, bh);
   }
-  eqRunning = !document.hidden && (moving || !audio.paused);
+  eqRunning = !document.hidden && !arcadeOpen;
   if (eqRunning) requestAnimationFrame(eqDraw);
 }
 function eqStart() { if (!eqRunning) { eqRunning = true; requestAnimationFrame(eqDraw); } }
@@ -1414,11 +1260,8 @@ setTimeout(hideSplash, 3000);
 
 updatePlayButton();
 buildGenres();
-// Open straight onto the controls with the last genre used (80's the
-// first time) — not playing yet, one tap on Play starts it.
-let savedGenre = '80s';
-try { savedGenre = localStorage.getItem('genre') || savedGenre; } catch (e) {}
-openAlbum(Math.max(0, ALBUMS.findIndex(a => a.id === savedGenre)), false);
+// Open straight onto the controls — not playing yet, one tap on Play starts it.
+openAlbum(0, false);
 </script>
 </body>
 </html>
