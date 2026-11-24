@@ -2,7 +2,8 @@
    ARCADE — "Lantern Run", opened by the ARCADE button.
    A ninja runs a bamboo maze (a new one every level) gathering rice
    balls while lantern spirits give chase. Pick up throwing stars and
-   throw them to pop the spirits. The music carries on underneath.
+   throw them to pop the spirits. A red daruma gives the ninja the power
+   to eat the spirits for a few seconds. The music carries on underneath.
    ───────────────────────────────────────────────────────────── */
 let arcadeOpen = false;
 (() => {
@@ -15,11 +16,14 @@ const NINJA = [
   ['..bbbbbb..', '.bbbbbbbb.', '.rrrrrrrr.', '.bsskssks.', '.bbbbbbbb.', '..bbbbbb..', '.sbbddbbs.', '..rrrrrr..', '...bbbb...', '...d..d...']];
 const SPIRIT = ['...kkkk...', '..cccccc..', '.cccccccc.', '.cwwccwwc.', '.cwkccwkc.', '.cccccccc.', '.ckckckck.', '..cccrrc..', '...kkrr...', '.....rr...'];
 const RICE = ['..w..', '.www.', '.www.', 'wkkkw', 'wkkkw'];
+const DARUMA = ['..rrrr..', '.rrrrrr.', 'rrssssrr', 'rswsswsr', 'rskssksr', 'rrssssrr', '.rrrrrr.', '..rrrr..'];
+const POWER = 7;                                    // seconds a daruma's power lasts
 const STAR = [['..w..', '.www.', 'wwkww', '.www.', '..w..'], ['.w.w.', 'wwwww', '.wkw.', 'wwwww', '.w.w.']];
 
 const canvas = $('arcade-canvas'), g = canvas.getContext('2d');
 canvas.width = COLS * T; canvas.height = ROWS * T;
 
+let power = 0;
 let wall, items, left, ninja, spirits, shots, pops;
 let state = 'title', score = 0, lives = 3, stars = 2, level = 1, wait = 0, clock = 0, last = 0, best = 0;
 try { best = parseInt(localStorage.getItem('arcadeBest')) || 0; } catch (e) {}
@@ -61,7 +65,7 @@ function place() {                                   // everyone to their starti
   ninja = Object.assign(mover(1, ROWS - 2, 5), { dir: null, want: null, face: 'right' });
   spirits = [['#ff8c00', COLS - 2, 1, 0.1], ['#3ddc5a', 1, 1, 0.5], ['#ff5cb8', 7, 1, 0.3]].map(([colour, x, y, daft], i) =>
     Object.assign(mover(x, y, Math.min(4.6, 2.9 + level * 0.25)), { colour, daft, home: [x, y], out: 1 + i }));
-  shots = []; pops = []; wait = 1;
+  shots = []; pops = []; wait = 1; power = 0;
 }
 function newLevel() {
   makeMaze();
@@ -72,6 +76,10 @@ function newLevel() {
   for (let k = 0; k < 4; k++) {
     const at = free.splice(rnd(free.length), 1)[0];
     items[at] = 'star'; left--;
+  }
+  for (let k = 0; k < 3; k++) {
+    const at = free.splice(rnd(free.length), 1)[0];
+    items[at] = 'daruma'; left--;
   }
   place();
 }
@@ -104,7 +112,10 @@ function spiritTurn(s) {
   const on = ways.filter(([dx, dy]) => s.x + dx !== s.fx || s.y + dy !== s.fy);
   if (on.length) ways = on;                          // no turning back unless it must
   let way = ways[rnd(ways.length)];
-  if (Math.random() > s.daft) {
+  if (s.dim) {                                       // the ninja has the power: run away
+    const d = distances(ninja.x, ninja.y);
+    way = ways.reduce((a, b) => d[(s.x + b[0]) + ',' + (s.y + b[1])] > d[(s.x + a[0]) + ',' + (s.y + a[1])] ? b : a);
+  } else if (Math.random() > s.daft) {
     let tx = ninja.x, ty = ninja.y;
     if (s.colour === '#ff5cb8') {                    // pink heads you off
       const [dx, dy] = DIRS[ninja.face];
@@ -155,19 +166,29 @@ function action() {                                  // throw, or start / restar
   hud();
 }
 
+function popSpirit(s, points) {                      // burst it and send it home, lit again
+  const [x, y] = px(s);
+  add(points); hud();
+  pops.push({ x, y, colour: s.colour, t: 0 });
+  Object.assign(s, mover(s.home[0], s.home[1], s.speed), { out: 5, dim: false });
+}
+
 function update(dt) {
   clock += dt;
   if (wait > 0) { wait -= dt; return; }
   if (state !== 'play') return;
+  if (power > 0 && (power -= dt) <= 0) { power = 0; spirits.forEach(s => { s.dim = false; }); }
   advance(ninja, dt, ninjaTurn);
   const [nx, ny] = px(ninja), key = Math.round(nx) + ',' + Math.round(ny);
   if (items[key]) {
-    if (items[key] === 'rice') { left--; add(10); } else { stars++; add(50); }
+    if (items[key] === 'rice') { left--; add(10); }
+    else if (items[key] === 'daruma') { power = POWER; add(50); spirits.forEach(s => { s.dim = s.out <= 0; }); }
+    else { stars++; add(50); }
     delete items[key]; hud();
   }
   for (const s of spirits) {
     if (s.out > 0) { s.out -= dt; continue; }
-    advance(s, dt, spiritTurn);
+    advance(s, s.dim ? dt * 0.6 : dt, spiritTurn);
   }
   for (const shot of shots) {
     shot.x += shot.d[0] * 12 * dt; shot.y += shot.d[1] * 12 * dt;
@@ -175,15 +196,15 @@ function update(dt) {
     for (const s of spirits) {
       const [x, y] = px(s);
       if (s.out <= 0 && !shot.gone && Math.hypot(x - shot.x, y - shot.y) < 0.8) {
-        shot.gone = true; add(200); hud();
-        pops.push({ x, y, colour: s.colour, t: 0 });
-        Object.assign(s, mover(s.home[0], s.home[1], s.speed), { out: 5 });
+        shot.gone = true; popSpirit(s, 200);
       }
     }
   }
   shots = shots.filter(s => !s.gone);
   pops.forEach(p => { p.t += dt; }); pops = pops.filter(p => p.t < 0.6);
-  if (spirits.some(s => { const [x, y] = px(s); return s.out <= 0 && Math.hypot(x - nx, y - ny) < 0.65; })) {
+  const touching = s => { const [x, y] = px(s); return s.out <= 0 && Math.hypot(x - nx, y - ny) < 0.65; };
+  for (const s of spirits) if (s.dim && touching(s)) popSpirit(s, 300);
+  if (spirits.some(touching)) {
     lives--;
     if (lives > 0) place();
     else { state = 'over'; wait = 0.8; message('GAME OVER\nSCORE ' + score + '\nTAP TO PLAY AGAIN'); }
@@ -215,6 +236,7 @@ function draw() {
     } else {
       const it = items[x + ',' + y];
       if (it === 'rice') sprite(RICE, X + 4, Y + 4);
+      if (it === 'daruma') sprite(DARUMA, X + 2, Y + 2 + Math.round(Math.sin(clock * 5)));
       if (it === 'star') sprite(STAR[Math.floor(clock * 6) % 2].map(r => r.replace(/w/g, 'c')), X + 4, Y + 4, '#ffd400');
     }
   }
@@ -222,10 +244,14 @@ function draw() {
   for (const s of spirits) {
     if (s.out > 0 && Math.floor(clock * 8) % 2) continue;   // blinking: not out yet
     const [x, y] = px(s);
-    sprite(SPIRIT, x * T + 1, y * T + 1 + Math.sin(clock * 6 + s.daft * 9), s.colour);
+    sprite(SPIRIT, x * T + 1, y * T + 1 + Math.sin(clock * 6 + s.daft * 9), s.dim && !(power < 2 && Math.floor(clock * 8) % 2) ? '#8d8d9c' : s.colour);   // gone out; flickers as the power ends
   }
   if (!(wait > 0 && state === 'play' && Math.floor(clock * 8) % 2)) {
     const [x, y] = px(ninja);
+    if (power > 0 && (power > 2 || Math.floor(clock * 8) % 2)) {   // golden glow
+      g.fillStyle = '#ffd400';
+      g.beginPath(); g.arc(x * T + 6, y * T + 6, 7.5 + Math.sin(clock * 12), 0, Math.PI * 2); g.fill();
+    }
     sprite(NINJA[ninja.dir && Math.floor(clock * 10) % 2 ? 1 : 0], x * T + 1, y * T + 1, null, ninja.face === 'left');
   }
   for (const p of pops) {
@@ -248,7 +274,7 @@ window.openArcade = () => {
   if (arcadeOpen) return;
   arcadeOpen = true;
   $('arcade').hidden = false;
-  if (state !== 'play') { newLevel(); wait = 0; message('LANTERN RUN\n\nGather the rice balls.\nThrow ★ at the lanterns.\n\nTAP TO START'); state = 'title'; }
+  if (state !== 'play') { newLevel(); wait = 0; message('LANTERN RUN\n\nGather the rice balls.\nRed button throws stars\nat the lanterns.\nGrab a red daruma\nto eat them!\n\nTAP TO START'); state = 'title'; }
   else wait = 1;                                     // carrying on: a moment to get ready
   hud();
   last = performance.now();

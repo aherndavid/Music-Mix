@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.18">
+<meta name="version" content="1.19">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -209,7 +209,7 @@
   .btn-radio {
     flex: 1 1 0; min-width: 0; background: #4a4a4a; color: #f2f2f2; border-color: #6e6e6e;
     font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
-    padding: 8px 6px; height: clamp(64px, 17vw, 90px);
+    padding: 4px 6px; height: clamp(44px, 11vw, 58px);
   }
   #btn-moonmission { background: #0d47a1; border-color: #5c8fe0; }
   #btn-close {
@@ -374,11 +374,11 @@
   <div class="arcade-hud"><span id="arcade-score"></span><span id="arcade-best"></span><span id="arcade-lives"></span></div>
   <div id="arcade-stage"><canvas id="arcade-canvas"></canvas><div id="arcade-msg"></div></div>
   <div class="arcade-pad">
-    <button data-dir="up" aria-label="Up">▲</button>
-    <button data-dir="left" aria-label="Left" style="grid-column:1">◀</button>
-    <button id="arcade-throw" aria-label="Throw star">★</button>
-    <button data-dir="right" aria-label="Right">▶</button>
-    <button data-dir="down" aria-label="Down">▼</button>
+    <button data-dir="up" aria-label="Up"></button>
+    <button data-dir="left" aria-label="Left" style="grid-column:1"></button>
+    <button id="arcade-throw" aria-label="Throw star"></button>
+    <button data-dir="right" aria-label="Right"></button>
+    <button data-dir="down" aria-label="Down"></button>
   </div>
   <button id="btn-arcade-close" onclick="closeArcade()">BACK TO MUSIC</button>
 </div>
@@ -393,15 +393,15 @@
   <div class="arcade-hud"><span id="stack-score"></span><span id="stack-best"></span><span id="stack-level"></span></div>
   <div id="stack-stage"><canvas id="stack-canvas"></canvas><div id="stack-msg"></div></div>
   <div class="arcade-pad">
-    <button data-act="turn" aria-label="Turn" style="grid-column:2">↻</button>
-    <button data-act="left" aria-label="Left" style="grid-column:1">◀</button>
-    <button data-act="drop" id="stack-drop" aria-label="Drop">⤓</button>
-    <button data-act="right" aria-label="Right">▶</button>
-    <button data-act="down" aria-label="Down" style="grid-column:2">▼</button>
+    <button data-act="turn" aria-label="Turn" style="grid-column:2"></button>
+    <button data-act="left" aria-label="Left" style="grid-column:1"></button>
+    <button data-act="drop" id="stack-drop" aria-label="Drop"></button>
+    <button data-act="right" aria-label="Right"></button>
+    <button data-act="down" aria-label="Down" style="grid-column:2"></button>
   </div>
   <button id="btn-stack-close" onclick="closeStack()">BACK TO MUSIC</button>
 </div>
-<script src="arcade.js?v=2"></script>
+<script src="arcade.js?v=4"></script>
 <script src="stack.js?v=1"></script>
 <script>
 /* ─────────────────────────────────────────────────────────────
