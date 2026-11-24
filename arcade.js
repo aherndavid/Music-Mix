@@ -238,7 +238,7 @@ function draw() {
 }
 function frame(now) {
   if (!arcadeOpen) return;
-  update(Math.min(0.05, (now - last) / 1000));
+  update(Math.min(0.05, Math.max(0, now - last) / 1000));   // a frame can be stamped before the tap
   last = now;
   draw();
   requestAnimationFrame(frame);
